@@ -397,6 +397,27 @@ html, body {
   overflow: hidden;
 }
 
+.card-snippet-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.readmore-link {
+  margin-left: auto;
+  white-space: nowrap;
+  color: #00ff41;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  text-decoration: none;
+}
+
+.readmore-link:hover {
+  text-decoration: underline;
+}
+
 /* Bionic reading — bold first ~40% of each word */
 .bionic-bold {
   font-weight: 900;
