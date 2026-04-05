@@ -369,7 +369,7 @@ function App() {
 
       <main
         ref={feedContainerRef}
-        className={`feed-container ${isGlitching ? 'glitching' : ''}`}
+        className={`feed-container ${isDoomscroll ? 'doomscroll-mode' : 'news-mode'} ${isGlitching ? 'glitching' : ''}`}
       >
         {loading && articles.length === 0 ? (
           [1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />)

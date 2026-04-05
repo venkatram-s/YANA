@@ -253,15 +253,27 @@ html, body {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
-  scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 24px;
   padding: 0;
   align-items: stretch;
+}
+
+.feed-container.news-mode {
+  position: relative;
+  height: auto;
+  min-height: calc(100vh - 76px);
+  padding: 100px 20px 140px;
+  scroll-snap-type: none;
+}
+
+.feed-container.doomscroll-mode {
+  scroll-snap-type: y mandatory;
+  gap: 0;
 }
 
 .feed-container.war-room {
@@ -319,6 +331,16 @@ html, body {
   cursor: default;
 }
 
+.feed-container.news-mode .article-card {
+  height: auto;
+  min-height: 0;
+  max-width: 680px;
+  margin: 0 auto;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background-color: var(--surface-color);
+}
+
 /* Doomscroll unfocused — subtle dim only, no layout shift in full-screen */
 .article-card.unfocused {
   opacity: 0.6;
@@ -348,6 +370,7 @@ html, body {
   align-items: flex-end;
   gap: 16px;
   padding: clamp(20px, 5vw, 40px) clamp(16px, 4vw, 32px) clamp(28px, 5vh, 48px);
+  width: 100%;
 }
 
 .card-content {
@@ -391,19 +414,12 @@ html, body {
   font-size: clamp(0.88rem, 2vw, 0.98rem);
   color: rgba(255, 255, 255, 0.72);
   line-height: 1.65;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-snippet-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
+  max-width: 720px;
 }
 
 .readmore-link {
+  margin-top: 14px;
+  align-self: flex-end;
   margin-left: auto;
   white-space: nowrap;
   color: #00ff41;

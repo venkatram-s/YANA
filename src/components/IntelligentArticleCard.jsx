@@ -80,12 +80,7 @@ export const IntelligentArticleCard = ({
             <span className="card-date">{new Date(article.pubDate).toLocaleDateString()}</span>
           </div>
           <h2 className="card-title">{article.title}</h2>
-          <div className="card-snippet-row">
-            <p className="card-snippet">{bionicText(article.snippet)}</p>
-            <a className="readmore-link" href={article.link || '#'} target="_blank" rel="noreferrer">
-              Readmore
-            </a>
-          </div>
+          <p className="card-snippet">{bionicText(article.snippet)}</p>
         </div>
 
         <div className="card-actions">
@@ -115,6 +110,9 @@ export const IntelligentArticleCard = ({
             <Share2 size={24} />
             <span>Share</span>
           </button>
+          <a className="readmore-link" href={article.link || '#'} target="_blank" rel="noreferrer">
+            Readmore
+          </a>
         </div>
       </div>
     </article>
