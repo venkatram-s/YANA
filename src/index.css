@@ -919,10 +919,13 @@ html, body {
   width: 100%;
 }
 
+.feed-container.news-mode .card-action-btn {
+  display: none;
+}
+
 .feed-container.news-mode .card-actions {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   width: 100%;
