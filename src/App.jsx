@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Pause, Play } from 'lucide-react';
 
 import { DatabaseBroker } from './utils/databaseBroker';
 import { CryptoHarden } from './utils/cryptoHarden';
@@ -11,6 +10,12 @@ import { SkeletonLoader } from './components/SkeletonLoader';
 import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
 import { PanicOverlay } from './components/PanicOverlay';
+
+// Import success sound
+import successSound from '../attached_assets/koiroylers-correct-356013.mp3';
+
+// Import success sound
+import successSound from '../attached_assets/koiroylers-correct-356013.mp3';
 
 const dbBroker = new DatabaseBroker();
 const cryptoTool = new CryptoHarden();
@@ -315,6 +320,10 @@ function App() {
       const data = await res.json();
       const refined = data.choices[0].message.content;
       setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, aiRefined: true, loading: false } : a));
+      
+      // Play success sound
+      const audio = new Audio(successSound);
+      audio.play().catch(() => {});
     } catch (err) {
       console.error('AI refinement failed:', err);
       setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: false } : a));
@@ -423,14 +432,6 @@ function App() {
           ))
         )}
       </main>
-
-      {isDoomscroll && (
-        <button className="floating-auto-scroll" onClick={toggleAutoScroll}>
-          <div className={`scroll-indicator ${isAutoScrolling ? 'active' : ''}`}></div>
-          <span>{isAutoScrolling ? 'Pause' : 'Resume'}</span>
-          {isAutoScrolling ? <Pause size={18} /> : <Play size={18} />}
-        </button>
-      )}
 
       <NotesVault
         isOpen={notesOpen}
