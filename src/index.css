@@ -914,6 +914,14 @@ html, body {
   align-items: center;
 }
 
+.feed-container.news-mode .card-bottom {
+  align-items: flex-start;
+}
+
+.feed-container.news-mode .card-content {
+  flex: none;
+}
+
 /* No-Image mode removed: images are always displayed when available */
 
 /* Theme: Charcoal */
