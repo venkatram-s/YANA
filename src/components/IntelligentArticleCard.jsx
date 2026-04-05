@@ -78,7 +78,7 @@ export const IntelligentArticleCard = ({
             <span className="card-date">{new Date(article.pubDate).toLocaleDateString()}</span>
           </div>
           <h2 className="card-title">{article.title}</h2>
-          <p className="card-snippet">{bionicText(article.snippet)}</p>
+          <p className="card-snippet">{article.snippet}</p>
         </div>
 
         <div className="card-actions">
