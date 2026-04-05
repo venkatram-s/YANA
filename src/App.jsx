@@ -244,7 +244,13 @@ function App() {
       setGhostUIEnabled(true);
       scrollIntervalRef.current = setInterval(() => {
         const container = feedContainerRef.current;
-        if (container) container.scrollBy({ top: 2, behavior: 'auto' });
+        if (!container) return;
+        const isDesktop = window.innerWidth >= 769;
+        if (isDesktop && !isWarRoom) {
+          container.scrollBy({ left: 2, behavior: 'auto' });
+        } else {
+          container.scrollBy({ top: 2, behavior: 'auto' });
+        }
       }, 30);
     }
   };
