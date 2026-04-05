@@ -67,9 +67,8 @@ function App() {
   const [cryptoPassword, setCryptoPassword] = useState('');
   const [vaultLocked, setVaultLocked] = useState(true);
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState([]);
 
-  // Doomscroll auto-scroll interval (customizable by user)
   const [doomscrollIntervalMs, setDoomscrollIntervalMs] = useState(() => {
     const v = localStorage.getItem('yana_doomscroll_interval_ms');
     const parsed = v ? parseInt(v, 10) : 5000;
@@ -92,69 +91,45 @@ function App() {
   const feedContainerRef = useRef(null);
   const filteredRef = useRef([]);
 
-  // No-Image mode removed: always show images
-
   useEffect(() => {
     localStorage.setItem('groq_api_key', groqKey);
   }, [groqKey]);
 
-  const autoScrollDelay = useRef(null);
-  // Doomscroll interval is now controlled by doomscrollIntervalMs state
-  const startScroll = useCallback(() => {
-    clearInterval(scrollIntervalRef.current);
-    setIsAutoScrolling(true);
-    scrollIntervalRef.current = setInterval(() => {
-      if (isHoveringRef.current) return; // Don't scroll when hovering
-      const c = feedContainerRef.current;
-        if (c) {
-        const currentScroll = c.scrollTop;
-        const maxScroll = c.scrollHeight - c.clientHeight;
-        if (currentScroll >= maxScroll - 10) {
-          // Stop at bottom to prevent infinite scroll
-          stopScroll();
-          return;
-        }
-        // Scroll by one full viewport to advance to the next card
-        c.scrollBy({ top: c.clientHeight, behavior: 'auto' });
-      }
-    }, doomscrollIntervalMs);
-  }, [doomscrollIntervalMs]);
-
-  const stopScroll = useCallback(() => {
-    clearInterval(scrollIntervalRef.current);
-    setIsAutoScrolling(false);
-  }, []);
-
+  // --- AUTO-SCROLL: clean, single source of truth via isAutoScrolling ---
   useEffect(() => {
-    // Auto-start doomscroll when content is ready (robust fallback)
-    if (feedMode === 'doomscroll' && articles.length > 0) {
-      if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
-      autoScrollDelay.current = setTimeout(() => {
-        if (!isAutoScrolling) startScroll();
-      }, 250);
-    } else {
-      stopScroll();
-      feedContainerRef.current?.scrollTo({ top: 0 });
+    if (!isAutoScrolling) {
+      clearInterval(scrollIntervalRef.current);
+      return;
     }
-    return () => {
-      if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
-    };
-  }, [feedMode, articles.length, startScroll, stopScroll, isAutoScrolling]);
+    scrollIntervalRef.current = setInterval(() => {
+      if (isHoveringRef.current) return;
+      const c = feedContainerRef.current;
+      if (!c) return;
+      const currentScroll = c.scrollTop;
+      const maxScroll = c.scrollHeight - c.clientHeight;
+      if (currentScroll >= maxScroll - 10) {
+        setIsAutoScrolling(false);
+        return;
+      }
+      c.scrollBy({ top: c.clientHeight, behavior: 'auto' });
+    }, doomscrollIntervalMs);
+    return () => clearInterval(scrollIntervalRef.current);
+  }, [isAutoScrolling, doomscrollIntervalMs]);
 
-  // Fallback: ensure auto-scroll kicks in after mode/length changes (additional safety)
+  // Auto-start doomscroll when content is ready
   useEffect(() => {
-    if (feedMode === 'doomscroll' && articles.length > 0 && !isAutoScrolling) {
-      startScroll();
+    if (feedMode === 'doomscroll' && articles.length > 0) {
+      const t = setTimeout(() => setIsAutoScrolling(true), 300);
+      return () => clearTimeout(t);
+    } else {
+      setIsAutoScrolling(false);
+      feedContainerRef.current?.scrollTo({ top: 0 });
     }
   }, [feedMode, articles.length]);
 
-  // If doomscroll interval changes while scrolling, restart the auto-scroll with new interval
-  useEffect(() => {
-    if (isAutoScrolling) {
-      stopScroll();
-      startScroll();
-    }
-  }, [doomscrollIntervalMs]);
+  const toggleAutoScroll = () => {
+    setIsAutoScrolling(prev => !prev);
+  };
 
   useEffect(() => {
     const boot = async () => {
@@ -170,6 +145,10 @@ function App() {
       const lastTheme = localStorage.getItem('yana_theme') || 'black';
       setTheme(lastTheme);
       document.documentElement.setAttribute('data-theme', lastTheme);
+
+      // Load notes
+      const storedNotes = await dbBroker.getItem('markdownNotes');
+      if (storedNotes?.length) setNotes(storedNotes);
     };
     boot();
 
@@ -179,7 +158,7 @@ function App() {
       r.continuous = false;
       r.interimResults = false;
       r.lang = 'en-US';
-      r.onresult = (e) => { setNotes(p => `${p}\n[TRANSCRIPT]: ${e.results[0][0].transcript}`); setIsDictating(false); };
+      r.onresult = (e) => { setNotes(p => [...p, { id: Date.now().toString(), title: 'Voice Transcript', date: new Date().toISOString(), content: e.results[0][0].transcript, sourceUrl: '' }]); setIsDictating(false); };
       r.onerror = () => setIsDictating(false);
       r.onend = () => setIsDictating(false);
       recognitionRef.current = r;
@@ -194,17 +173,14 @@ function App() {
     sync();
   }, [rssFeeds]);
 
+  // Persist notes to IndexedDB
   useEffect(() => {
-    if (!vaultLocked && cryptoPassword) {
-      cryptoTool.encryptData(notes || ' ', cryptoPassword).then(pkg => dbBroker.setItem('encryptedNotes', pkg));
-    }
-  }, [notes, vaultLocked, cryptoPassword]);
+    if (notes.length > 0) dbBroker.setItem('markdownNotes', notes);
+  }, [notes]);
 
   useEffect(() => {
-    // Doomscroll focus tracking remains, but we do not auto-start scanning until user resumes
     const container = feedContainerRef.current;
     if (!container || feedMode !== 'doomscroll') return;
-    // Initialize observer only when user actively starts doomscroll (manual enable via UI)
     observerRef.current?.disconnect();
     observerRef.current = new IntersectionObserver((entries) => {
       if (feedMode !== 'doomscroll') return;
@@ -225,7 +201,6 @@ function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-      // Ignore any modified keys (Ctrl, Alt, Meta, Shift) to avoid conflicting with browser shortcuts
       if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       if (e.key === 'Escape') {
         if (panicMode) { setPanicMode(false); return; }
@@ -282,7 +257,6 @@ function App() {
       const enc = await dbBroker.getItem('encryptedNotes');
       if (!enc) { setVaultLocked(false); return; }
       const plain = await cryptoTool.decryptData(enc, cryptoPassword);
-      setNotes(plain);
       setVaultLocked(false);
       setFailedAttempts(0);
     } catch {
@@ -302,18 +276,18 @@ function App() {
   const handleRefineWithAI = async (articleId) => {
     if (!groqKey) { alert('Add a Groq API key in Settings first.'); setSettingsOpen(true); return; }
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
-      try {
+    try {
       const art = articles.find(a => a.id === articleId);
-        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [{
-              role: 'user',
-              content: `Anchor to the linked RSS article: ${art.title} (${art.link}). If available, pull the RSS title and body from the feed. Based on that content, perform a concise web search to gather up-to-date information about this topic. Prioritize findings related to the linked article. Provide 2-4 information bullets with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite credible references. Present results as plain text, no extraneous formatting.`
-            }]
-          }),
+          model: 'llama-3.3-70b-versatile',
+          messages: [{
+            role: 'user',
+            content: `Anchor to the linked RSS article: ${art.title} (${art.link}). Based on that content, perform a concise web search to gather up-to-date information about this topic. Prioritize findings related to the linked article. Provide 2-4 information bullets with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite credible references. Present results as plain text, no extraneous formatting.`
+          }]
+        }),
       });
       const data = await res.json();
       const refined = data.choices[0].message.content;
@@ -345,8 +319,15 @@ function App() {
   };
 
   const handleSaveToNotes = (article) => {
-    const entry = `\n\n## ${article.title}\n*${article.source || 'Feed'} · ${new Date(article.pubDate).toLocaleDateString()}*\n\n${article.snippet}\n\n[Read more](${article.link || ''})`;
-    setNotes(prev => prev + entry);
+    const mdContent = `# ${article.title}\n\n> **Source:** ${article.source || 'Feed'}  \n> **Date:** ${new Date(article.pubDate).toLocaleDateString()}  \n> **Link:** ${article.link || ''}\n\n---\n\n${article.snippet}\n`;
+    const newNote = {
+      id: Date.now().toString(),
+      title: article.title,
+      date: new Date().toISOString(),
+      content: mdContent,
+      sourceUrl: article.link || '',
+    };
+    setNotes(prev => [...prev, newNote]);
     setNotesOpen(true);
   };
 
@@ -420,7 +401,7 @@ function App() {
       </main>
 
       {isDoomscroll && (
-        <button className="floating-auto-scroll" onClick={() => isAutoScrolling ? stopScroll() : startScroll()}>
+        <button className="floating-auto-scroll" onClick={toggleAutoScroll}>
           <div className={`scroll-indicator ${isAutoScrolling ? 'active' : ''}`}></div>
           <span>{isAutoScrolling ? 'Pause' : 'Resume'}</span>
           {isAutoScrolling ? <Pause size={18} /> : <Play size={18} />}
@@ -435,15 +416,8 @@ function App() {
         cryptoPassword={cryptoPassword}
         onPasswordChange={setCryptoPassword}
         onUnlock={handleUnlockVault}
-        onExport={() => {
-          const blob = new Blob([notes], { type: 'text/markdown' });
-          const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = 'yana_notes.md';
-          a.click();
-        }}
-        onClose={() => setNotesOpen(false)}
         onNotesChange={setNotes}
+        onClose={() => setNotesOpen(false)}
       />
 
       <SettingsModal
