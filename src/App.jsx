@@ -95,25 +95,46 @@ function App() {
     localStorage.setItem('groq_api_key', groqKey);
   }, [groqKey]);
 
-  // --- AUTO-SCROLL: clean, single source of truth via isAutoScrolling ---
+  // --- AUTO-SCROLL: Direct scrollTop manipulation for reliability ---
   useEffect(() => {
     if (!isAutoScrolling) {
       clearInterval(scrollIntervalRef.current);
+      console.log('[AUTOSCROLL] Stopped.');
       return;
     }
+    
+    console.log('[AUTOSCROLL] Starting with interval:', doomscrollIntervalMs, 'ms');
+    
     scrollIntervalRef.current = setInterval(() => {
-      if (isHoveringRef.current) return;
       const c = feedContainerRef.current;
-      if (!c) return;
+      if (!c) {
+        console.log('[AUTOSCROLL] No container found.');
+        return;
+      }
+      if (isHoveringRef.current) {
+        console.log('[AUTOSCROLL] Paused (hovering).');
+        return;
+      }
+      
       const currentScroll = c.scrollTop;
       const maxScroll = c.scrollHeight - c.clientHeight;
+      
+      console.log('[AUTOSCROLL] Tick. scrollTop:', currentScroll, 'maxScroll:', maxScroll);
+
       if (currentScroll >= maxScroll - 10) {
+        console.log('[AUTOSCROLL] Reached bottom. Stopping.');
         setIsAutoScrolling(false);
         return;
       }
-      c.scrollBy({ top: c.clientHeight, behavior: 'auto' });
+      
+      // Direct scrollTop manipulation (most reliable method)
+      c.scrollTop = currentScroll + c.clientHeight;
     }, doomscrollIntervalMs);
-    return () => clearInterval(scrollIntervalRef.current);
+    
+    return () => {
+      clearInterval(scrollIntervalRef.current);
+      console.log('[AUTOSCROLL] Cleanup.');
+    };
   }, [isAutoScrolling, doomscrollIntervalMs]);
 
   // Auto-start doomscroll when content is ready
