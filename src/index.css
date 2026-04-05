@@ -57,6 +57,17 @@ html, body {
   background: transparent;
 }
 
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  height: 60vh;
+  padding: 40px;
+  max-width: 500px;
+}
+
 #root {
   display: flex;
   flex-direction: column;

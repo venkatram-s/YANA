@@ -13,11 +13,7 @@ import { SkeletonLoader } from './components/SkeletonLoader';
 import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
 
-const DEFAULT_FEEDS = [
-  'https://www.theverge.com/rss/index.xml',
-  'https://techcrunch.com/feed/',
-  'https://www.zdnet.com/news/rss.xml'
-];
+const DEFAULT_FEEDS = [];
 
 // Instantiating global service singletons to ensure consistent state and performance
 const dbBroker = new DatabaseBroker();
@@ -326,6 +322,12 @@ function App() {
           <>
             {[1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />)}
           </>
+        ) : articles.length === 0 ? (
+          <div className="empty-state">
+            <h2 style={{ color: 'var(--accent-color)', marginBottom: '15px' }}>ZERO_INTELLIGENCE_SOURCES</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>No active news protocols detected. Inject RSS sources via Enclave Configurations to begin dispatch aggregation.</p>
+            <button className="btn-primary" onClick={() => setSettingsOpen(true)}>Initialize Sources</button>
+          </div>
         ) : isWarRoom ? (
           <>
             {['Tech', 'Finance', 'Science', 'General'].map(cat => (
