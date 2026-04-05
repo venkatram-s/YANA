@@ -62,6 +62,7 @@ function App() {
   const pressTimerRef = useRef(null);
   const recognitionRef = useRef(null);
   const isHoveringRef = useRef(false);
+  const feedContainerRef = useRef(null);
 
   /**
    * INITIALIZATION SEQUENCE
@@ -167,22 +168,29 @@ function App() {
 
   /**
    * FOCAL AWARENESS LOGIC
-   * Uses IntersectionObserver for mobile and Hover state for desktop.
+   * Uses IntersectionObserver scoped to the feed container, not the window.
    */
   useEffect(() => {
+    const container = feedContainerRef.current;
+    if (!container) return;
     if (observerRef.current) observerRef.current.disconnect();
+
     observerRef.current = new IntersectionObserver((entries) => {
       if (isHoveringRef.current) return;
       let focalItem = null;
-      let minDis = Infinity;
+      let maxRatio = 0;
       entries.forEach(entry => {
-        const d = Math.abs(entry.boundingClientRect.top + entry.boundingClientRect.height / 2 - window.innerHeight / 2);
-        if (d < minDis) { minDis = d; focalItem = entry.target; }
+        if (entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          focalItem = entry.target;
+        }
       });
-      if (focalItem) setFocusedArticleId(focalItem.getAttribute('data-id'));
-    }, { threshold: [0.4, 0.6] });
-    
-    document.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
+      if (focalItem && maxRatio > 0.3) {
+        setFocusedArticleId(focalItem.getAttribute('data-id'));
+      }
+    }, { root: container, threshold: [0, 0.3, 0.5, 0.8, 1.0] });
+
+    container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
     return () => observerRef.current.disconnect();
   }, [articles, isWarRoom]);
 
@@ -234,7 +242,10 @@ function App() {
     } else {
       setIsAutoScrolling(true);
       setGhostUIEnabled(true);
-      scrollIntervalRef.current = setInterval(() => window.scrollBy({ top: 1, behavior: 'auto' }), 40);
+      scrollIntervalRef.current = setInterval(() => {
+        const container = feedContainerRef.current;
+        if (container) container.scrollBy({ top: 2, behavior: 'auto' });
+      }, 30);
     }
   };
 
@@ -317,7 +328,7 @@ function App() {
         onOpenNotes={() => setNotesOpen(true)}
       />
 
-      <main className={`feed-container ${isWarRoom ? 'war-room' : 'focus-masked'} ${ghostUIEnabled ? 'ghost-ui-active' : ''}`}>
+      <main ref={feedContainerRef} className={`feed-container ${isWarRoom ? 'war-room' : 'focus-masked'} ${ghostUIEnabled ? 'ghost-ui-active' : ''}`}>
         {loading && articles.length === 0 ? (
           <>
             {[1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />)}
