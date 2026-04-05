@@ -288,25 +288,13 @@ function App() {
       const art = articles.find(a => a.id === articleId);
       const searchQuery = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
       
-      // Fetch live web search results via DuckDuckGo HTML
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://html.duckduckgo.com/html/?q=${searchQuery}`)}`;
-      const searchRes = await fetch(proxyUrl);
+      // Fetch live web search results via our serverless proxy
+      const searchRes = await fetch(`/api/web-search?q=${searchQuery}`);
       const searchData = await searchRes.json();
       
-      // Parse DuckDuckGo results
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(searchData.contents, 'text/html');
-      const results = Array.from(doc.querySelectorAll('.result')).slice(0, 5).map(r => {
-        const titleEl = r.querySelector('.result__title');
-        const snippetEl = r.querySelector('.result__snippet');
-        const urlEl = r.querySelector('.result__url');
-        return {
-          title: titleEl?.textContent?.trim() || '',
-          snippet: snippetEl?.textContent?.trim() || '',
-          url: urlEl?.getAttribute('href')?.trim() || urlEl?.textContent?.trim() || ''
-        };
-      }).filter(r => r.title && r.snippet);
+      if (searchData.error) throw new Error(searchData.error);
       
+      const results = searchData.results || [];
       const contextText = results.length > 0 
         ? results.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
         : 'No live search results available. Using training data only.';
