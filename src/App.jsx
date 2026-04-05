@@ -106,7 +106,7 @@ function App() {
     scrollIntervalRef.current = setInterval(() => {
       if (isHoveringRef.current) return; // Don't scroll when hovering
       const c = feedContainerRef.current;
-      if (c) {
+        if (c) {
         const currentScroll = c.scrollTop;
         const maxScroll = c.scrollHeight - c.clientHeight;
         if (currentScroll >= maxScroll - 10) {
@@ -114,7 +114,8 @@ function App() {
           stopScroll();
           return;
         }
-        c.scrollBy({ top: 5, behavior: 'auto' });
+        // Scroll by one full viewport to advance to the next card
+        c.scrollBy({ top: c.clientHeight, behavior: 'auto' });
       }
     }, doomscrollIntervalMs);
   }, [doomscrollIntervalMs]);

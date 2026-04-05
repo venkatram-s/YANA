@@ -104,7 +104,7 @@ export const IntelligentArticleCard = ({
           </button>
 
           <a className="readmore-link" href={article.link || '#'} target="_blank" rel="noreferrer">
-            Readmore
+            READ MORE
           </a>
         </div>
       </div>
