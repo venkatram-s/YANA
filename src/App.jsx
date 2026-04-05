@@ -126,7 +126,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Auto-start doomscroll when content is ready
+    // Auto-start doomscroll when content is ready (robust fallback)
     if (feedMode === 'doomscroll' && articles.length > 0) {
       if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
       autoScrollDelay.current = setTimeout(() => {
@@ -140,6 +140,13 @@ function App() {
       if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
     };
   }, [feedMode, articles.length, startScroll, stopScroll, isAutoScrolling]);
+
+  // Fallback: ensure auto-scroll kicks in after mode/length changes (additional safety)
+  useEffect(() => {
+    if (feedMode === 'doomscroll' && articles.length > 0 && !isAutoScrolling) {
+      startScroll();
+    }
+  }, [feedMode, articles.length]);
 
   // If doomscroll interval changes while scrolling, restart the auto-scroll with new interval
   useEffect(() => {
