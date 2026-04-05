@@ -238,9 +238,14 @@ function App() {
     if (!nextId) return;
     setFocusedArticleId(nextId);
     const el = feedContainerRef.current?.querySelector(`[data-id="${nextId}"]`);
-    if (el && feedContainerRef.current) {
-      feedContainerRef.current.scrollTo({ top: el.offsetTop - feedContainerRef.current.offsetTop - 20, behavior: 'smooth' });
-    }
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // ── Save article to notes ──────────────────────────────────────────────────
+  const handleSaveToNotes = (article) => {
+    const entry = `\n\n## ${article.title}\n*${article.source || 'Feed'} · ${new Date(article.pubDate).toLocaleDateString()}*\n\n${article.snippet}\n\n[Read more](${article.link || ''})`;
+    setNotes(prev => prev + entry);
+    setNotesOpen(true);
   };
 
   // ── Glitch trigger ─────────────────────────────────────────────────────────
@@ -364,7 +369,7 @@ function App() {
 
       <main
         ref={feedContainerRef}
-        className={`feed-container ${isDoomscroll ? 'doomscroll-mode' : ''} ${isGlitching ? 'glitching' : ''}`}
+        className={`feed-container ${isGlitching ? 'glitching' : ''}`}
       >
         {loading && articles.length === 0 ? (
           [1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />)
@@ -372,7 +377,7 @@ function App() {
           <div className="empty-state">
             <h2 style={{ color: 'var(--accent-color)', marginBottom: '15px' }}>ZERO_INTELLIGENCE_SOURCES</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Add RSS feeds in Settings to begin.</p>
-            <button className="btn-primary" onClick={() => setSettingsOpen(true)}>Initialize Sources</button>
+            <button className="btn-primary" onClick={() => setSettingsOpen(true)}>INITIALIZE SOURCES</button>
           </div>
         ) : (
           filtered.map(ia => (
@@ -382,15 +387,14 @@ function App() {
               isDoomscroll={isDoomscroll}
               isFocused={focusedArticleId === ia.id}
               ttsActiveId={ttsActiveId}
-              isDictating={isDictating}
               xrayActiveId={xrayActiveId}
               onHover={(id) => { isHoveringRef.current = true; setFocusedArticleId(id); }}
               onLeave={() => { isHoveringRef.current = false; }}
               onPointerDown={(a) => { pressTimerRef.current = setTimeout(() => setXrayActiveId(a.id), 600); }}
               onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
               onToggleTTS={handleToggleTTS}
-              onStartDictation={() => { setIsDictating(true); recognitionRef.current?.start(); }}
               onRefineWithAI={handleRefineWithAI}
+              onSaveToNotes={() => handleSaveToNotes(ia)}
             />
           ))
         )}

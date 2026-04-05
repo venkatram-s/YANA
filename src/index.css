@@ -76,18 +76,27 @@ html, body {
   height: 100vh;
 }
 
-/* APP HEADER */
+/* APP HEADER — fixed overlay so the feed can go full-screen underneath */
 .app-header {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 20px;
-  padding: clamp(12px, 2.5vw, 20px) var(--header-px, clamp(16px, 5vw, 40px));
-  background: var(--bg-color);
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  padding: clamp(10px, 2vw, 16px) var(--header-px, clamp(16px, 5vw, 40px));
+  background: linear-gradient(to bottom, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.5) 70%, transparent 100%);
+  border-bottom: none;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+/* Re-enable pointer events only on interactive children */
+.app-header > * {
+  pointer-events: auto;
 }
 
 .logo-container {
@@ -238,20 +247,21 @@ html, body {
   transform: translateY(-2px);
 }
 
-/* FEED & WAR ROOM ORCHESTRATION */
+/* FEED — full-screen reel container */
 .feed-container {
-  flex: 1;
-  width: 100%;
-  overflow-y: auto;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow-y: scroll;
   overflow-x: hidden;
-  scroll-behavior: smooth;
-  scroll-snap-type: y proximity;
-  scroll-padding-top: 20px;
-  padding: 20px 20px 140px 20px;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  align-items: center;
+  gap: 0;
+  padding: 0;
+  align-items: stretch;
 }
 
 .feed-container.war-room {
@@ -294,95 +304,155 @@ html, body {
   margin-bottom: 10px;
 }
 
-/* ARTICLE CARD & ADAPTIVE FOCUS */
+/* ── REEL CARD ──────────────────────────────────────────────────────── */
 .article-card {
   width: 100%;
-  max-width: 680px;
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  overflow: hidden;
-  transition: all var(--transition-normal);
+  height: 100vh;
+  flex-shrink: 0;
   position: relative;
   scroll-snap-align: start;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-
-.article-card:hover {
-  border-color: var(--text-muted);
-  transform: translateY(-4px);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-}
-
-/* Doomscroll mode — dim unfocused cards */
-.feed-container.doomscroll-mode .article-card.unfocused {
-  opacity: 0.3;
-  filter: blur(2px) grayscale(50%) scale(0.97);
-  pointer-events: none;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.article-media {
-  width: 100%;
-  height: clamp(220px, 35vh, 400px);
-  object-fit: cover;
-  background-color: #1a1a1a;
-  filter: grayscale(100%);
-  transition: filter 0.4s ease, transform 0.6s ease;
-}
-
-.article-card:hover .article-media {
-  transform: scale(1.05);
-  filter: grayscale(0%);
-}
-
-.article-content {
-  padding: clamp(16px, 4vw, 24px);
-}
-
-.article-meta {
+  overflow: hidden;
+  background-color: #0a0a0a;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: flex-end;
+  cursor: default;
+}
+
+/* Doomscroll unfocused — subtle dim only, no layout shift in full-screen */
+.article-card.unfocused {
+  opacity: 0.6;
+  transition: opacity 0.4s ease;
+}
+
+/* Full-bleed gradient overlay */
+.card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.92) 0%,
+    rgba(0, 0, 0, 0.5) 45%,
+    rgba(0, 0, 0, 0.1) 75%,
+    transparent 100%
+  );
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Bottom row: text + action bar */
+.card-bottom {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: clamp(20px, 5vw, 40px) clamp(16px, 4vw, 32px) clamp(28px, 5vh, 48px);
+}
+
+.card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-meta {
+  display: flex;
   align-items: center;
-  margin-bottom: 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .article-source {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--accent-color);
-  opacity: 0.8;
-}
-
-.article-title {
-  font-size: clamp(1.2rem, 3.5vw, 1.45rem);
+  font-size: 0.72rem;
   font-weight: 700;
-  line-height: 1.35;
-  margin-bottom: 14px;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #00ff41;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
 }
 
-.article-snippet {
-  font-size: clamp(0.9rem, 2.5vw, 1rem);
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 24px;
-  font-weight: 400;
+.card-date {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
 }
 
-.article-actions {
+.card-title {
+  font-size: clamp(1.3rem, 4vw, 1.9rem);
+  font-weight: 800;
+  line-height: 1.22;
+  color: #ffffff;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
+}
+
+.card-snippet {
+  font-size: clamp(0.88rem, 2vw, 0.98rem);
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Bionic reading — bold first ~40% of each word */
+.bionic-bold {
+  font-weight: 900;
+  color: #ffffff;
+}
+
+/* Right-side vertical action bar */
+.card-actions {
   display: flex;
-  gap: 16px;
-  border-top: 1px solid var(--border-color);
-  padding-top: 20px;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  flex-shrink: 0;
+  padding-bottom: 4px;
+}
+
+.card-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8));
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.card-action-btn:hover {
+  transform: scale(1.18);
+}
+
+.card-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card-action-btn span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-action-btn.action-refined svg {
+  color: #00ff41;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.6));
+}
+
+/* No-image mode: dark gradient fill instead of image */
+[data-no-image="true"] .article-card {
+  background-image: none !important;
+  background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 100%) !important;
 }
 
 /* X-RAY OVERLAY */
@@ -650,11 +720,6 @@ html, body {
 .toggle-switch.on::after {
   background: #fff;
   transform: translateX(18px);
-}
-
-/* ── NO-IMAGE MODE ────────────────────────────────────────────────── */
-[data-no-image="true"] .article-media {
-  display: none;
 }
 
 /* ── GLITCH ANIMATION ─────────────────────────────────────────────── */

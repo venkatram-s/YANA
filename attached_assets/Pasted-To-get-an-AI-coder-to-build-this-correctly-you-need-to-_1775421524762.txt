@@ -1,0 +1,61 @@
+To get an AI coder to build this correctly, you need to describe it as a "Vertical Snap-Scroll Container" rather than just a "list." You want to emphasize the Viewport-Centric nature of the UI.
+
+Copy and paste this technical specification:
+
+Technical Specification: Single-Page Vertical "Reel" Feed
+1. Layout & Container:
+
+Full-Screen Constraint: The main container must be 100vh and 100vw with overflow-y: scroll. Use scroll-snap-type: y mandatory to ensure each "post" snaps perfectly to the viewport.
+
+The Post Component: Each news item should be a section or div with height: 100vh and scroll-snap-align: start. This ensures only one post is fully visible at a time.
+
+2. Visual Hierarchy (Instagram-Style Overlay):
+
+Background: If an image/thumbnail exists, set it as a full-bleed background with a darken filter or a linear-gradient(to top, rgba(0,0,0,0.8), transparent) so text remains readable.
+
+Bottom-Anchored Metadata: The Headline, Category Tag, and AI Summary should be absolutely positioned at the bottom-left of the viewport.
+
+Right-Side Action Bar: A vertical stack of icons on the bottom-right for:
+
+[Refine with AI] (Groq)
+
+[Save to Notes]
+
+[Listen/TTS]
+
+[Share]
+
+3. Interaction Logic:
+
+The "Auto-Scroll" Engine: Implement a setInterval or requestAnimationFrame that increments scrollTop. If the user touches the screen, clear the interval. If they double-tap, restart it.
+
+Intersection Observer: Use the Intersection Observer API to detect which post is currently "Active."
+
+Trigger: When a post is 70% visible, trigger the Auto-Read status and update the TTS buffer to the current article.
+
+Bionic Reading Filter: For the main text body, wrap the first 40% of every word in a <span> with a higher font-weight (e.g., font-weight: 900 vs 400) to enable speed-reading.
+
+4. The "Notes" Drawer:
+
+Implement a side-panel or a bottom-sheet (using transform: translateY) that stays hidden until the "Note" icon is tapped. It should auto-focus a textarea that saves to localStorage on every input event.
+
+5. CSS "Void" Styling:
+
+CSS
+:root {
+  --oled-black: #000000;
+  --high-contrast-text: #FFFFFF;
+  --accent-neon: #00FF41; /* Matrix Green */
+}
+
+body {
+  background-color: var(--oled-black);
+  color: var(--high-contrast-text);
+  font-family: 'Inter', sans-serif;
+}
+
+.post-container {
+  border-bottom: 1px solid #333; /* Minimalist separator */
+}
+The "Vibe" prompt for the Bot:
+"Build this as a distraction-free, brutalist information terminal. There should be no headers or footers visible during the scroll—only the news content. Priority is on motion fluidity and OLED power-saving. Use Tailwind CSS for the layout and Lucide-React for the high-contrast icons."
