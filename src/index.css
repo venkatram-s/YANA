@@ -907,19 +907,27 @@ html, body {
   }
 }
 
-.feed-container.news-mode .card-actions {
-  display: flex;
-  flex-direction: row;
-  gap: 12px;
-  align-items: center;
-}
-
 .feed-container.news-mode .card-bottom {
-  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .feed-container.news-mode .card-content {
   flex: none;
+  width: 100%;
+}
+
+.feed-container.news-mode .card-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  justify-content: flex-start;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
 }
 
 /* No-Image mode removed: images are always displayed when available */
