@@ -7,6 +7,8 @@ export const SettingsModal = ({
   newRssUrl,
   groqKey,
   onClose,
+  doomscrollIntervalMs,
+  onDoomscrollIntervalChange,
   onAddFeed,
   onRemoveFeed,
   onUrlChange,
@@ -127,6 +129,23 @@ export const SettingsModal = ({
           </div>
         </section>
 
+        {/* Doomscroll Interval (user-configurable) */}
+        <section style={{ marginBottom: '28px' }}>
+          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+            Doomscroll Interval
+          </h3>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="number"
+              min={1}
+              max={600}
+              value={doomscrollIntervalMs ? Math.round(doomscrollIntervalMs/1000) : 5}
+              onChange={(e) => onDoomscrollIntervalChange?.(e.target.valueAsNumber)}
+              style={{ width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+            />
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>seconds</span>
+          </div>
+        </section>
         {/* Groq AI */}
         <section style={{ marginBottom: '28px' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>

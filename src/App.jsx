@@ -69,6 +69,21 @@ function App() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [notes, setNotes] = useState('');
 
+  // Doomscroll auto-scroll interval (customizable by user)
+  const [doomscrollIntervalMs, setDoomscrollIntervalMs] = useState(() => {
+    const v = localStorage.getItem('yana_doomscroll_interval_ms');
+    const parsed = v ? parseInt(v, 10) : 5000;
+    return Number.isFinite(parsed) ? parsed : 5000;
+  });
+
+  const onDoomscrollIntervalChange = (seconds) => {
+    const s = Number(seconds);
+    const clamped = Number.isFinite(s) ? Math.max(1, Math.min(600, s)) : 5;
+    const ms = clamped * 1000;
+    setDoomscrollIntervalMs(ms);
+    localStorage.setItem('yana_doomscroll_interval_ms', String(ms));
+  };
+
   const scrollIntervalRef = useRef(null);
   const observerRef = useRef(null);
   const pressTimerRef = useRef(null);
@@ -84,6 +99,7 @@ function App() {
   }, [groqKey]);
 
   const autoScrollDelay = useRef(null);
+  // Doomscroll interval is now controlled by doomscrollIntervalMs state
   const startScroll = useCallback(() => {
     clearInterval(scrollIntervalRef.current);
     setIsAutoScrolling(true);
@@ -98,10 +114,10 @@ function App() {
           stopScroll();
           return;
         }
-        c.scrollBy({ top: 1, behavior: 'auto' });
+        c.scrollBy({ top: 5, behavior: 'auto' });
       }
-    }, 50);
-  }, []);
+    }, doomscrollIntervalMs);
+  }, [doomscrollIntervalMs]);
 
   const stopScroll = useCallback(() => {
     clearInterval(scrollIntervalRef.current);
@@ -121,9 +137,16 @@ function App() {
     }
     return () => {
       if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
-      // Do not null scrollInterval here; the caller will clear on unmount
     };
   }, [feedMode, articles.length, startScroll, stopScroll, isAutoScrolling]);
+
+  // If doomscroll interval changes while scrolling, restart the auto-scroll with new interval
+  useEffect(() => {
+    if (isAutoScrolling) {
+      stopScroll();
+      startScroll();
+    }
+  }, [doomscrollIntervalMs]);
 
   useEffect(() => {
     const boot = async () => {
@@ -276,11 +299,11 @@ function App() {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        body: JSON.stringify({
             model: 'llama-3.3-70b-versatile',
             messages: [{
               role: 'user',
-              content: `Anchor to the linked article: ${art.title} (${art.link}). Based on the content of the linked article, perform a concise web search to gather up-to-date information about this topic. Prioritize findings related to the linked article. Provide 2-4 information bullets with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite credible references. Present results as plain text, no extraneous formatting.`
+              content: `Anchor to the linked RSS article: ${art.title} (${art.link}). If available, pull the RSS title and body from the feed. Based on that content, perform a concise web search to gather up-to-date information about this topic. Prioritize findings related to the linked article. Provide 2-4 information bullets with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite credible references. Present results as plain text, no extraneous formatting.`
             }]
           }),
       });
@@ -420,6 +443,8 @@ function App() {
         rssFeeds={rssFeeds}
         newRssUrl={newRssUrl}
         groqKey={groqKey}
+        doomscrollIntervalMs={doomscrollIntervalMs}
+        onDoomscrollIntervalChange={onDoomscrollIntervalChange}
         onClose={() => setSettingsOpen(false)}
         onUrlChange={setNewRssUrl}
         onAddFeed={() => { if (newRssUrl && !rssFeeds.includes(newRssUrl)) { setRssFeeds(p => [...p, newRssUrl]); setNewRssUrl(''); } }}

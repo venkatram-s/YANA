@@ -907,6 +907,13 @@ html, body {
   }
 }
 
+.feed-container.news-mode .card-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+}
+
 /* No-Image mode removed: images are always displayed when available */
 
 /* Theme: Charcoal */
