@@ -162,18 +162,22 @@ html, body {
   font-weight: 900;
   color: #fff;
   margin-bottom: 10px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: manual;
+  white-space: normal;
+  max-width: 100%;
 }
 
 .card-snippet {
   font-size: clamp(0.85rem, 2vw, 0.96rem);
   line-height: 1.6;
   color: rgba(255,255,255,0.74);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  hyphens: manual;
+  white-space: normal;
+  max-width: 100%;
 }
 
 .bionic-bold {

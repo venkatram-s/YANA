@@ -167,13 +167,13 @@ function App() {
 
   useEffect(() => {
     const container = feedContainerRef.current;
-    if (!container) return;
+    if (!container || feedMode !== 'doomscroll') return;
     
     // Clear previous observer
     observerRef.current?.disconnect();
     
     observerRef.current = new IntersectionObserver((entries) => {
-      if (isHoveringRef.current || feedMode !== 'doomscroll') return;
+      if (feedMode !== 'doomscroll') return;
       let best = null;
       let bestRatio = 0;
       entries.forEach(e => {
@@ -185,12 +185,8 @@ function App() {
       if (best && bestRatio > 0.7) setFocusedArticleId(best.getAttribute('data-id'));
     }, { root: container, threshold: [0.3, 0.5, 0.7, 1] });
     
-    // Only observe if in doomscroll mode
-    if (feedMode === 'doomscroll') {
-      container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
-    }
-    
     container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
+    
     return () => observerRef.current?.disconnect();
   }, [articles, feedMode]);
 

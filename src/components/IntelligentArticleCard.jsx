@@ -56,7 +56,6 @@ export const IntelligentArticleCard = ({
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
       onTouchStart={() => onHover(article.id)}
-      onTouchEnd={onLeave}
     >
       <div className="card-overlay" />
 
