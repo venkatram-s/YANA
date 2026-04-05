@@ -95,46 +95,33 @@ function App() {
     localStorage.setItem('groq_api_key', groqKey);
   }, [groqKey]);
 
-  // --- AUTO-SCROLL: Direct scrollTop manipulation for reliability ---
+  // --- AUTO-SCROLL: Smooth interval-based scrolling ---
   useEffect(() => {
     if (!isAutoScrolling) {
       clearInterval(scrollIntervalRef.current);
-      console.log('[AUTOSCROLL] Stopped.');
       return;
     }
     
-    console.log('[AUTOSCROLL] Starting with interval:', doomscrollIntervalMs, 'ms');
-    
     scrollIntervalRef.current = setInterval(() => {
       const c = feedContainerRef.current;
-      if (!c) {
-        console.log('[AUTOSCROLL] No container found.');
-        return;
-      }
-      if (isHoveringRef.current) {
-        console.log('[AUTOSCROLL] Paused (hovering).');
-        return;
-      }
+      if (!c || isHoveringRef.current) return;
       
       const currentScroll = c.scrollTop;
       const maxScroll = c.scrollHeight - c.clientHeight;
       
-      console.log('[AUTOSCROLL] Tick. scrollTop:', currentScroll, 'maxScroll:', maxScroll);
-
       if (currentScroll >= maxScroll - 10) {
-        console.log('[AUTOSCROLL] Reached bottom. Stopping.');
         setIsAutoScrolling(false);
         return;
       }
       
-      // Direct scrollTop manipulation (most reliable method)
-      c.scrollTop = currentScroll + c.clientHeight;
+      // Smooth scroll to next article
+      c.scrollTo({
+        top: currentScroll + c.clientHeight,
+        behavior: 'smooth'
+      });
     }, doomscrollIntervalMs);
     
-    return () => {
-      clearInterval(scrollIntervalRef.current);
-      console.log('[AUTOSCROLL] Cleanup.');
-    };
+    return () => clearInterval(scrollIntervalRef.current);
   }, [isAutoScrolling, doomscrollIntervalMs]);
 
   // Auto-start doomscroll when content is ready
