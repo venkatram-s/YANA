@@ -9,6 +9,7 @@ import { fetchRssContent } from './services/newsService';
 // Refactored UI Layer Imports
 import { Header } from './components/Header';
 import { IntelligentArticleCard } from './components/IntelligentArticleCard';
+import { SkeletonLoader } from './components/SkeletonLoader';
 import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
 
@@ -116,19 +117,30 @@ function App() {
     
     bootstrapApplication();
 
-    // Step 4: Initialize Speech Recognition for Voice-to-Note dictation
-    const Lexicon = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (Lexicon) {
-      const rec = new Lexicon();
-      rec.continuous = false;
-      rec.onresult = (evt) => {
-        const transcript = evt.results[0][0].transcript;
-        setNotes(prev => prev + `\n[VOICE_RECORD]: ${transcript}`);
-        setIsDictating(false);
-      };
-      rec.onend = () => setIsDictating(false);
-      recognitionRef.current = rec;
-    }
+      // Step 4: Cross-browser Speech Recognition Initialization with Shims
+      const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognitionImpl) {
+        const recognizerInstance = new SpeechRecognitionImpl();
+        recognizerInstance.continuous = false;
+        recognizerInstance.interimResults = false;
+        recognizerInstance.lang = 'en-US';
+        
+        recognizerInstance.onresult = (evt) => {
+          const stream = evt.results[0][0].transcript;
+          setNotes(prev => `${prev}\n[TRANSCRIPT]: ${stream}`);
+          setIsDictating(false);
+          // Auto-save happens via notes useEffect
+        };
+        
+        recognizerInstance.onerror = (e) => {
+          console.warn("Speech recognition interface error:", e);
+          setIsDictating(false);
+        };
+        
+        recognizerInstance.onend = () => setIsDictating(false);
+        recognitionRef.current = recognizerInstance;
+      }
+    bootstrapApplication();
   }, []);
 
   /**
@@ -230,6 +242,42 @@ function App() {
     }
   };
 
+  const handleRefineWithAI = async (articleId) => {
+    if (!groqKey) {
+        alert("CRITICAL_CONFIGURATION_MISSING: Groq API Key required for deep intelligence refinement.");
+        setSettingsOpen(true);
+        return;
+    }
+
+    setArticles(prev => prev.map(a => a.id === articleId ? { ...a, loading: true } : a));
+
+    try {
+        const article = articles.find(a => a.id === articleId);
+        const prompt = `Refine this news snippet into a 2-sentence high-impact intelligence brief: ${article.title} - ${article.snippet}`;
+        
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${groqKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'llama-3.3-70b-versatile',
+                messages: [{ role: 'user', content: prompt }]
+            })
+        });
+
+        const data = await response.json();
+        const refinedBrief = data.choices[0].message.content;
+
+        setArticles(prev => prev.map(a => a.id === articleId ? { ...a, snippet: refinedBrief, aiRefined: true, loading: false } : a));
+    } catch (err) {
+        console.error("AI Refinement Failure:", err);
+        setArticles(prev => prev.map(a => a.id === articleId ? { ...a, loading: false } : a));
+        alert("INTELLIGENCE_LAYER_TIMEOUT: Failed to reach Groq bridge.");
+    }
+  };
+
   const handleToggleTTS = (article) => {
     if (!('speechSynthesis' in window)) return;
     if (ttsActiveId === article.id) { 
@@ -275,7 +323,9 @@ function App() {
 
       <main className={`feed-container ${isWarRoom ? 'war-room' : 'focus-masked'} ${ghostUIEnabled ? 'ghost-ui-active' : ''}`}>
         {loading && articles.length === 0 ? (
-          <div className="loader"></div>
+          <>
+            {[1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />)}
+          </>
         ) : isWarRoom ? (
           <>
             {['Tech', 'Finance', 'Science', 'General'].map(cat => (
@@ -296,7 +346,7 @@ function App() {
                       onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
                       onToggleTTS={handleToggleTTS}
                       onStartDictation={() => { setIsDictating(true); recognitionRef.current.start(); }}
-                      onRefineWithAI={() => alert("Requires Groq API Key validation.")}
+                      onRefineWithAI={handleRefineWithAI}
                    />
                 ))}
               </div>
@@ -318,7 +368,7 @@ function App() {
                 onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
                 onToggleTTS={handleToggleTTS}
                 onStartDictation={() => { setIsDictating(true); recognitionRef.current.start(); }}
-                onRefineWithAI={() => alert("Requires Groq API Key validation.")}
+                onRefineWithAI={handleRefineWithAI}
              />
           ))
         )}

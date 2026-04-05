@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Mic, Bot } from 'lucide-react';
+import { Volume2, VolumeX, Mic, Bot, Loader2 } from 'lucide-react';
 
 /**
  * IntelligentArticleCard component handles individual news items, 
@@ -66,8 +66,8 @@ export const IntelligentArticleCard = ({
               {isTtsActive ? <VolumeX size={16} /> : <Volume2 size={16} />}
               {isTtsActive ? 'Suspend' : 'Listen'}
             </button>
-            <button className="btn-icon" title="Refine with AI Intelligence" onClick={() => onRefineWithAI(article.id)}>
-              <Bot size={18} color={'var(--text-secondary)'} />
+            <button className="btn-icon" title="Refine with AI Intelligence" onClick={() => onRefineWithAI(article.id)} disabled={article.loading}>
+              {article.loading ? <Loader2 size={18} className="spin" color="var(--accent-color)" /> : <Bot size={18} color={article.aiRefined ? 'var(--accent-color)' : 'var(--text-secondary)'} />}
             </button>
             {isTtsActive && window.SpeechRecognition && (
               <button 
