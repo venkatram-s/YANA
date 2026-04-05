@@ -39,13 +39,13 @@ export default defineConfig({
         // High-performance cache strategy for News Feeds and Assets
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/corsproxy\.io\/.*$/,
+            urlPattern: /^\/api\/rss-proxy.*$/,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'rss-feeds-cache',
+              cacheName: 'rss-feeds-cache-v2',
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 Hours
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 6 // 6 Hours (Framer news stale check)
               }
             }
           }
@@ -53,6 +53,16 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+       // Support for local API dev if not using 'vercel dev'
+       '/api': {
+         target: 'http://localhost:3000',
+         changeOrigin: true,
+         rewrite: (path) => path.replace(/^\/api/, '/api')
+       }
+    }
+  },
   build: {
     target: 'esnext',
     minify: 'terser',

@@ -33,15 +33,27 @@ export const fetchRssContent = async (url) => {
   try {
     let xmlText = '';
     
-    // Tier 1: corsproxy.io (Primary high-bandwidth proxy)
+    // Tier 1: Localized Vercel Serverless Proxy (Zero-CORS, Managed User-Agent)
     try {
-      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+      const response = await fetch(`/api/rss-proxy?url=${encodeURIComponent(url)}`);
       if (response.ok) xmlText = await response.text();
     } catch (e) {
-      console.warn(`Primary proxy layer failed for [${url}]:`, e);
+      console.warn(`Local proxy layer failed for [${url}]:`, e);
+    }
+    
+    // Tier 2: proxy.cors.sh (High-reputation secondary fallback)
+    if (!xmlText) {
+      try {
+        const response = await fetch(`https://proxy.cors.sh/${url}`, {
+           headers: { 'x-cors-gratis': 'true' }
+        });
+        if (response.ok) xmlText = await response.text();
+      } catch (e) {
+        console.warn(`CORS.SH tier failed for [${url}]:`, e);
+      }
     }
 
-    // Tier 2: allorigins.win (Resilient community-backed fallback)
+    // Tier 3: allorigins.win (Last-resort community fallback)
     if (!xmlText) {
       const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
       if (response.ok) {
