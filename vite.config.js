@@ -2,12 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-/**
- * Vite Configuration for YANA V3
- * 
- * Optimized for Production PWA deployment with rigorous caching protocols
- * and automated service worker generation.
- */
 export default defineConfig({
   plugins: [
     react(),
@@ -36,7 +30,6 @@ export default defineConfig({
         ]
       },
       workbox: {
-        // High-performance cache strategy for News Feeds and Assets
         runtimeCaching: [
           {
             urlPattern: /^\/api\/rss-proxy.*$/,
@@ -45,7 +38,7 @@ export default defineConfig({
               cacheName: 'rss-feeds-cache-v2',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 6 // 6 Hours (Framer news stale check)
+                maxAgeSeconds: 60 * 60 * 6
               }
             }
           }
@@ -54,13 +47,15 @@ export default defineConfig({
     })
   ],
   server: {
+    host: '0.0.0.0',
+    port: 5000,
+    allowedHosts: true,
     proxy: {
-       // Support for local API dev if not using 'vercel dev'
-       '/api': {
-         target: 'http://localhost:3000',
-         changeOrigin: true,
-         rewrite: (path) => path.replace(/^\/api/, '/api')
-       }
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
     }
   },
   build: {
