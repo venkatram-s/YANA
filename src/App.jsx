@@ -11,11 +11,8 @@ import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
 import { PanicOverlay } from './components/PanicOverlay';
 
-// Import success sound
-import successSound from '../attached_assets/koiroylers-correct-356013.mp3';
-
-// Import success sound
-import successSound from '../attached_assets/koiroylers-correct-356013.mp3';
+// Success sound path
+const SUCCESS_SOUND_URL = '/attached_assets/koiroylers-correct-356013.mp3';
 
 const dbBroker = new DatabaseBroker();
 const cryptoTool = new CryptoHarden();
@@ -322,7 +319,7 @@ function App() {
       setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, aiRefined: true, loading: false } : a));
       
       // Play success sound
-      const audio = new Audio(successSound);
+      const audio = new Audio(SUCCESS_SOUND_URL);
       audio.play().catch(() => {});
     } catch (err) {
       console.error('AI refinement failed:', err);
