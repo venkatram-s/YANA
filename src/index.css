@@ -103,6 +103,7 @@ html, body {
   border: 1px solid var(--border-color);
   border-radius: 20px;
   background-color: var(--surface-color);
+  overflow: visible;
 }
 
 .card-overlay {
