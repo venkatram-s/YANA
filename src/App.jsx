@@ -286,6 +286,32 @@ function App() {
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
     try {
       const art = articles.find(a => a.id === articleId);
+      const searchQuery = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
+      
+      // Fetch live web search results via DuckDuckGo HTML
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://html.duckduckgo.com/html/?q=${searchQuery}`)}`;
+      const searchRes = await fetch(proxyUrl);
+      const searchData = await searchRes.json();
+      
+      // Parse DuckDuckGo results
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(searchData.contents, 'text/html');
+      const results = Array.from(doc.querySelectorAll('.result')).slice(0, 5).map(r => {
+        const titleEl = r.querySelector('.result__title');
+        const snippetEl = r.querySelector('.result__snippet');
+        const urlEl = r.querySelector('.result__url');
+        return {
+          title: titleEl?.textContent?.trim() || '',
+          snippet: snippetEl?.textContent?.trim() || '',
+          url: urlEl?.getAttribute('href')?.trim() || urlEl?.textContent?.trim() || ''
+        };
+      }).filter(r => r.title && r.snippet);
+      
+      const contextText = results.length > 0 
+        ? results.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
+        : 'No live search results available. Using training data only.';
+      
+      // Synthesize with Groq using real search results
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
@@ -293,16 +319,18 @@ function App() {
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'user',
-            content: `Anchor to the linked RSS article: ${art.title} (${art.link}). Based on that content, perform a concise web search to gather up-to-date information about this topic. Prioritize findings related to the linked article. Provide 2-4 information bullets with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite credible references. Present results as plain text, no extraneous formatting.`
+            content: `Article: ${art.title}\nLink: ${art.link}\n\nLive web search results:\n${contextText}\n\nBased on the article and live search results above, provide: 2-4 key information bullets with source URLs, a 1-2 sentence conclusion, and 2-3 follow-up questions. Cite sources by number [1], [2], etc. Plain text only.`
           }]
         }),
       });
+      
       const data = await res.json();
       const refined = data.choices[0].message.content;
       setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, aiRefined: true, loading: false } : a));
-    } catch {
+    } catch (err) {
+      console.error('AI refinement failed:', err);
       setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: false } : a));
-      alert('AI request failed.');
+      alert('AI request failed. Check console for details.');
     }
   };
 
