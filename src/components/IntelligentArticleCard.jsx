@@ -56,10 +56,8 @@ export const IntelligentArticleCard = ({
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
     >
-      {/* Gradient overlay */}
       <div className="card-overlay" />
 
-      {/* X-Ray */}
       {isXrayActive && (
         <div className="x-ray-overlay">
           <div className="x-ray-title">⚡ Entity Extraction</div>
@@ -72,7 +70,6 @@ export const IntelligentArticleCard = ({
         </div>
       )}
 
-      {/* Bottom content + right actions */}
       <div className="card-bottom">
         <div className="card-content">
           <div className="card-meta">
@@ -90,9 +87,7 @@ export const IntelligentArticleCard = ({
             disabled={article.loading}
             title="AI Refine"
           >
-            {article.loading
-              ? <Loader2 size={24} className="spin" />
-              : <Bot size={24} />}
+            {article.loading ? <Loader2 size={24} className="spin" /> : <Bot size={24} />}
             <span>Refine</span>
           </button>
 
@@ -110,6 +105,7 @@ export const IntelligentArticleCard = ({
             <Share2 size={24} />
             <span>Share</span>
           </button>
+
           <a className="readmore-link" href={article.link || '#'} target="_blank" rel="noreferrer">
             Readmore
           </a>

@@ -15,27 +15,21 @@ import { PanicOverlay } from './components/PanicOverlay';
 const dbBroker = new DatabaseBroker();
 const cryptoTool = new CryptoHarden();
 
-// ── Streak logic ──────────────────────────────────────────────────────────────
 function calcStreak() {
   const today = new Date().toDateString();
   const last = localStorage.getItem('yana_last_visit');
   const streak = parseInt(localStorage.getItem('yana_streak') || '0', 10);
-
   if (last === today) return streak;
-
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const newStreak = last === yesterday.toDateString() ? streak + 1 : 1;
-  localStorage.setItem('yana_streak', String(newStreak));
+  const next = last === yesterday.toDateString() ? streak + 1 : 1;
+  localStorage.setItem('yana_streak', String(next));
   localStorage.setItem('yana_last_visit', today);
-  return newStreak;
+  return next;
 }
 
-// ── OPML helpers ──────────────────────────────────────────────────────────────
 function exportOPML(feeds) {
-  const items = feeds
-    .map(url => `    <outline type="rss" text="${url}" xmlUrl="${url}" />`)
-    .join('\n');
+  const items = feeds.map(url => `    <outline type="rss" text="${url}" xmlUrl="${url}" />`).join('\n');
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n  <head><title>YANA Feed Export</title></head>\n  <body>\n    <outline text="Feeds" title="Feeds">\n${items}\n    </outline>\n  </body>\n</opml>`;
   const blob = new Blob([xml], { type: 'text/xml' });
   const a = document.createElement('a');
@@ -48,18 +42,15 @@ function exportOPML(feeds) {
 function parseOPML(text) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(text, 'text/xml');
-  const outlines = Array.from(doc.querySelectorAll('outline[xmlUrl]'));
-  return outlines.map(o => o.getAttribute('xmlUrl')).filter(Boolean);
+  return Array.from(doc.querySelectorAll('outline[xmlUrl]')).map(o => o.getAttribute('xmlUrl')).filter(Boolean);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function App() {
   const [theme, setTheme] = useState('black');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [feedMode, setFeedMode] = useState('ordinary');
+  const [feedMode, setFeedMode] = useState('doomscroll');
   const [isGlitching, setIsGlitching] = useState(false);
-
   const [notesOpen, setNotesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [panicMode, setPanicMode] = useState(false);
@@ -67,16 +58,13 @@ function App() {
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [noImageMode, setNoImageMode] = useState(() => localStorage.getItem('yana_no_image') === 'true');
   const [streak] = useState(calcStreak);
-
   const [rssFeeds, setRssFeeds] = useState([]);
   const [newRssUrl, setNewRssUrl] = useState('');
   const [groqKey, setGroqKey] = useState(localStorage.getItem('groq_api_key') || '');
-
   const [ttsActiveId, setTtsActiveId] = useState(null);
   const [focusedArticleId, setFocusedArticleId] = useState(null);
   const [xrayActiveId, setXrayActiveId] = useState(null);
   const [isDictating, setIsDictating] = useState(false);
-
   const [cryptoPassword, setCryptoPassword] = useState('');
   const [vaultLocked, setVaultLocked] = useState(true);
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -90,18 +78,15 @@ function App() {
   const feedContainerRef = useRef(null);
   const filteredRef = useRef([]);
 
-  // Sync noImageMode to DOM + localStorage
   useEffect(() => {
     localStorage.setItem('yana_no_image', String(noImageMode));
     document.documentElement.setAttribute('data-no-image', String(noImageMode));
   }, [noImageMode]);
 
-  // Sync groqKey to localStorage
   useEffect(() => {
     localStorage.setItem('groq_api_key', groqKey);
   }, [groqKey]);
 
-  // ── Auto-scroll ────────────────────────────────────────────────────────────
   const startScroll = useCallback(() => {
     clearInterval(scrollIntervalRef.current);
     setIsAutoScrolling(true);
@@ -120,46 +105,31 @@ function App() {
     if (feedMode === 'doomscroll') startScroll();
     else stopScroll();
     return () => clearInterval(scrollIntervalRef.current);
-  }, [feedMode]);
+  }, [feedMode, startScroll, stopScroll]);
 
-  // ── Initialization ─────────────────────────────────────────────────────────
   useEffect(() => {
     const boot = async () => {
       const storedFeeds = await dbBroker.getItem('rssFeeds');
       if (storedFeeds) setRssFeeds(storedFeeds);
-
       const hasVault = await dbBroker.getItem('encryptedNotes');
       if (!hasVault) setVaultLocked(false);
-
       const cached = await dbBroker.getItem('cachedArticles');
-      if (cached?.length) { setArticles(cached); setLoading(false); }
-
+      if (cached?.length) {
+        setArticles(cached);
+        setLoading(false);
+      }
       const lastTheme = localStorage.getItem('yana_theme') || 'black';
       setTheme(lastTheme);
       document.documentElement.setAttribute('data-theme', lastTheme);
-
-      const chronoSync = () => {
-        const now = new Date();
-        const bed = new Date(); bed.setHours(23, 0, 0, 0);
-        const diff = bed.getTime() - now.getTime();
-        let ratio = 0;
-        if (diff < 0 && diff > -14400000) ratio = 1;
-        else if (diff > 0 && diff < 18000000) ratio = 1 - diff / 18000000;
-        const r = Math.round(59 + (239 - 59) * ratio);
-        const g = Math.round(130 + (68 - 130) * ratio);
-        const b = Math.round(246 + (68 - 246) * ratio);
-        document.documentElement.style.setProperty('--accent-color', `rgb(${r},${g},${b})`);
-      };
-      const tick = setInterval(chronoSync, 30000);
-      chronoSync();
-      return () => clearInterval(tick);
     };
     boot();
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SR) {
       const r = new SR();
-      r.continuous = false; r.interimResults = false; r.lang = 'en-US';
+      r.continuous = false;
+      r.interimResults = false;
+      r.lang = 'en-US';
       r.onresult = (e) => { setNotes(p => `${p}\n[TRANSCRIPT]: ${e.results[0][0].transcript}`); setIsDictating(false); };
       r.onerror = () => setIsDictating(false);
       r.onend = () => setIsDictating(false);
@@ -167,7 +137,6 @@ function App() {
     }
   }, []);
 
-  // ── Feed sync ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const sync = async () => {
       await dbBroker.setItem('rssFeeds', rssFeeds);
@@ -176,35 +145,35 @@ function App() {
     sync();
   }, [rssFeeds]);
 
-  // ── Notes encryption ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!vaultLocked && cryptoPassword) {
-      cryptoTool.encryptData(notes || ' ', cryptoPassword)
-        .then(pkg => dbBroker.setItem('encryptedNotes', pkg));
+      cryptoTool.encryptData(notes || ' ', cryptoPassword).then(pkg => dbBroker.setItem('encryptedNotes', pkg));
     }
   }, [notes, vaultLocked, cryptoPassword]);
 
-  // ── IntersectionObserver for focused card ──────────────────────────────────
   useEffect(() => {
     const container = feedContainerRef.current;
     if (!container) return;
     observerRef.current?.disconnect();
     observerRef.current = new IntersectionObserver((entries) => {
-      if (isHoveringRef.current) return;
-      let best = null, bestRatio = 0;
-      entries.forEach(e => { if (e.intersectionRatio > bestRatio) { bestRatio = e.intersectionRatio; best = e.target; } });
-      if (best && bestRatio > 0.3) setFocusedArticleId(best.getAttribute('data-id'));
-    }, { root: container, threshold: [0, 0.3, 0.5, 0.8, 1] });
+      if (isHoveringRef.current || feedMode !== 'doomscroll') return;
+      let best = null;
+      let bestRatio = 0;
+      entries.forEach(e => {
+        if (e.intersectionRatio > bestRatio) {
+          bestRatio = e.intersectionRatio;
+          best = e.target;
+        }
+      });
+      if (best && bestRatio > 0.7) setFocusedArticleId(best.getAttribute('data-id'));
+    }, { root: container, threshold: [0.3, 0.5, 0.7, 1] });
     container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
     return () => observerRef.current?.disconnect();
-  }, [articles]);
+  }, [articles, feedMode]);
 
-  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
-      // Ignore when typing in input/textarea
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-
       if (e.key === 'Escape') {
         if (panicMode) { setPanicMode(false); return; }
         if (settingsOpen) { setSettingsOpen(false); return; }
@@ -212,22 +181,16 @@ function App() {
         setPanicMode(true);
         return;
       }
-
-      if (e.key === 'j' || e.key === 'J') {
-        e.preventDefault();
-        navigateArticle(1);
-      } else if (e.key === 'k' || e.key === 'K') {
-        e.preventDefault();
-        navigateArticle(-1);
-      } else if (e.key === 's' || e.key === 'S') {
-        setNotesOpen(true);
-      } else if (e.key === 'r' || e.key === 'R') {
+      if (e.key === 'j' || e.key === 'J') { e.preventDefault(); navigateArticle(1); }
+      if (e.key === 'k' || e.key === 'K') { e.preventDefault(); navigateArticle(-1); }
+      if (e.key === 's' || e.key === 'S') setNotesOpen(true);
+      if (e.key === 'r' || e.key === 'R') {
         if (focusedArticleId) handleRefineWithAI(focusedArticleId);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [panicMode, settingsOpen, notesOpen, focusedArticleId, filteredRef.current]);
+  }, [panicMode, settingsOpen, notesOpen, focusedArticleId]);
 
   const navigateArticle = (dir) => {
     const list = filteredRef.current;
@@ -241,20 +204,11 @@ function App() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // ── Save article to notes ──────────────────────────────────────────────────
-  const handleSaveToNotes = (article) => {
-    const entry = `\n\n## ${article.title}\n*${article.source || 'Feed'} · ${new Date(article.pubDate).toLocaleDateString()}*\n\n${article.snippet}\n\n[Read more](${article.link || ''})`;
-    setNotes(prev => prev + entry);
-    setNotesOpen(true);
-  };
-
-  // ── Glitch trigger ─────────────────────────────────────────────────────────
   const triggerGlitch = () => {
     setIsGlitching(true);
     setTimeout(() => setIsGlitching(false), 120);
   };
 
-  // ── Feed refresh ───────────────────────────────────────────────────────────
   const refreshFeeds = async () => {
     if (articles.length === 0) setLoading(true);
     const agg = [];
@@ -269,18 +223,20 @@ function App() {
     if (agg.length > 0) triggerGlitch();
   };
 
-  // ── Vault unlock ───────────────────────────────────────────────────────────
   const handleUnlockVault = async () => {
     try {
       const enc = await dbBroker.getItem('encryptedNotes');
       if (!enc) { setVaultLocked(false); return; }
       const plain = await cryptoTool.decryptData(enc, cryptoPassword);
-      setNotes(plain); setVaultLocked(false); setFailedAttempts(0);
+      setNotes(plain);
+      setVaultLocked(false);
+      setFailedAttempts(0);
     } catch {
       const f = failedAttempts + 1;
       setFailedAttempts(f);
       if (f >= 3) {
-        await dbBroker.purgeDatabase(); localStorage.clear();
+        await dbBroker.purgeDatabase();
+        localStorage.clear();
         alert('FATAL: Vault wiped after 3 failed attempts.');
         window.location.reload();
       } else {
@@ -289,7 +245,6 @@ function App() {
     }
   };
 
-  // ── AI Refine ──────────────────────────────────────────────────────────────
   const handleRefineWithAI = async (articleId) => {
     if (!groqKey) { alert('Add a Groq API key in Settings first.'); setSettingsOpen(true); return; }
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
@@ -309,7 +264,6 @@ function App() {
     }
   };
 
-  // ── TTS ───────────────────────────────────────────────────────────────────
   const handleToggleTTS = (article) => {
     if (!('speechSynthesis' in window)) return;
     if (ttsActiveId === article.id) { window.speechSynthesis.cancel(); setTtsActiveId(null); return; }
@@ -320,7 +274,6 @@ function App() {
     setTtsActiveId(article.id);
   };
 
-  // ── OPML ──────────────────────────────────────────────────────────────────
   const handleImportOPML = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -331,9 +284,17 @@ function App() {
     reader.readAsText(file);
   };
 
+  const handleSaveToNotes = (article) => {
+    const entry = `\n\n## ${article.title}\n*${article.source || 'Feed'} · ${new Date(article.pubDate).toLocaleDateString()}*\n\n${article.snippet}\n\n[Read more](${article.link || ''})`;
+    setNotes(prev => prev + entry);
+    setNotesOpen(true);
+  };
+
   const handleHardReset = () => {
     if (confirm('Reset all data? This cannot be undone.')) {
-      dbBroker.purgeDatabase(); localStorage.clear(); window.location.reload();
+      dbBroker.purgeDatabase();
+      localStorage.clear();
+      window.location.reload();
     }
   };
 
@@ -371,9 +332,7 @@ function App() {
         ref={feedContainerRef}
         className={`feed-container ${isDoomscroll ? 'doomscroll-mode' : 'news-mode'} ${isGlitching ? 'glitching' : ''}`}
       >
-        {loading && articles.length === 0 ? (
-          [1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />)
-        ) : articles.length === 0 ? (
+        {loading && articles.length === 0 ? [1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />) : articles.length === 0 ? (
           <div className="empty-state">
             <h2 style={{ color: 'var(--accent-color)', marginBottom: '15px' }}>ZERO_INTELLIGENCE_SOURCES</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Add RSS feeds in Settings to begin.</p>
