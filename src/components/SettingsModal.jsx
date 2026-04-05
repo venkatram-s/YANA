@@ -1,18 +1,16 @@
 import React, { useRef } from 'react';
-import { X, Trash, Plus, ShieldAlert, Download, Upload, ImageOff, Image } from 'lucide-react';
+import { X, Trash, Plus, ShieldAlert, Download, Upload } from 'lucide-react';
 
 export const SettingsModal = ({
   isOpen,
   rssFeeds,
   newRssUrl,
   groqKey,
-  noImageMode,
   onClose,
   onAddFeed,
   onRemoveFeed,
   onUrlChange,
   onGroqKeyChange,
-  onToggleNoImage,
   onExportOPML,
   onImportOPML,
   onHardReset,
@@ -119,18 +117,13 @@ export const SettingsModal = ({
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
             Display
           </h3>
-          <div
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--surface-hover)', borderRadius: '10px', cursor: 'pointer' }}
-            onClick={onToggleNoImage}
-          >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--surface-hover)', borderRadius: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {noImageMode ? <ImageOff size={18} color="var(--accent-color)" /> : <Image size={18} color="var(--text-secondary)" />}
               <div>
-                <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>No-Image Mode</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Pure text, Wall of Information</div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>Images</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Images are shown with articles when available.</div>
               </div>
             </div>
-            <div className={`toggle-switch ${noImageMode ? 'on' : ''}`}></div>
           </div>
         </section>
 

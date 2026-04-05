@@ -56,7 +56,6 @@ function App() {
   const [panicMode, setPanicMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [noImageMode, setNoImageMode] = useState(() => localStorage.getItem('yana_no_image') === 'true');
   const [streak] = useState(calcStreak);
   const [rssFeeds, setRssFeeds] = useState([]);
   const [newRssUrl, setNewRssUrl] = useState('');
@@ -78,10 +77,7 @@ function App() {
   const feedContainerRef = useRef(null);
   const filteredRef = useRef([]);
 
-  useEffect(() => {
-    localStorage.setItem('yana_no_image', String(noImageMode));
-    document.documentElement.setAttribute('data-no-image', String(noImageMode));
-  }, [noImageMode]);
+  // No-Image mode removed: always show images
 
   useEffect(() => {
     localStorage.setItem('groq_api_key', groqKey);
@@ -164,12 +160,11 @@ function App() {
   }, [notes, vaultLocked, cryptoPassword]);
 
   useEffect(() => {
+    // Doomscroll focus tracking remains, but we do not auto-start scanning until user resumes
     const container = feedContainerRef.current;
     if (!container || feedMode !== 'doomscroll') return;
-    
-    // Clear previous observer
+    // Initialize observer only when user actively starts doomscroll (manual enable via UI)
     observerRef.current?.disconnect();
-    
     observerRef.current = new IntersectionObserver((entries) => {
       if (feedMode !== 'doomscroll') return;
       let best = null;
@@ -182,9 +177,7 @@ function App() {
       });
       if (best && bestRatio > 0.7) setFocusedArticleId(best.getAttribute('data-id'));
     }, { root: container, threshold: [0.3, 0.5, 0.7, 1] });
-    
     container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
-    
     return () => observerRef.current?.disconnect();
   }, [articles, feedMode]);
 
@@ -267,10 +260,16 @@ function App() {
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
     try {
       const art = articles.find(a => a.id === articleId);
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: `Summarize in 2 sharp sentences: ${art.title} — ${art.snippet}` }] }),
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{
+            role: 'user',
+            content: `You are a web research assistant. Based on the article title "${art.title}" and snippet "${art.snippet}", perform a concise web search to gather up-to-date information about this topic. Provide 2-4 bullet points with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite the best-known references. Present results as plain text in the same format, no extraneous formatting.`
+          }]
+        }),
       });
       const data = await res.json();
       const refined = data.choices[0].message.content;
@@ -408,13 +407,11 @@ function App() {
         rssFeeds={rssFeeds}
         newRssUrl={newRssUrl}
         groqKey={groqKey}
-        noImageMode={noImageMode}
         onClose={() => setSettingsOpen(false)}
         onUrlChange={setNewRssUrl}
         onAddFeed={() => { if (newRssUrl && !rssFeeds.includes(newRssUrl)) { setRssFeeds(p => [...p, newRssUrl]); setNewRssUrl(''); } }}
         onRemoveFeed={(u) => setRssFeeds(p => p.filter(f => f !== u))}
         onGroqKeyChange={setGroqKey}
-        onToggleNoImage={() => setNoImageMode(p => !p)}
         onExportOPML={() => exportOPML(rssFeeds)}
         onImportOPML={handleImportOPML}
         onHardReset={handleHardReset}

@@ -906,11 +906,7 @@ html, body {
   }
 }
 
-/* Data attribute support for no-image mode */
-[data-no-image="true"] .article-card {
-  background-image: none !important;
-  background-color: var(--surface-color) !important;
-}
+/* No-Image mode removed: images are always displayed when available */
 
 /* Theme: Charcoal */
 [data-theme="charcoal"] {

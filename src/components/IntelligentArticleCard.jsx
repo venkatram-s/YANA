@@ -45,11 +45,7 @@ export const IntelligentArticleCard = ({
     <article
       className={`article-card ${!isFocused && isDoomscroll ? 'unfocused' : ''}`}
       data-id={article.id}
-      style={article.image ? {
-        backgroundImage: `url(${article.image})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      } : {}}
+      style={{ background: 'var(--surface-color)' }}
       onMouseEnter={() => onHover(article.id)}
       onMouseLeave={onLeave}
       onPointerDown={() => onPointerDown(article)}
