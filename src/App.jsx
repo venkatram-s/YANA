@@ -184,6 +184,8 @@ function App() {
   useEffect(() => {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      // Ignore any modified keys (Ctrl, Alt, Meta, Shift) to avoid conflicting with browser shortcuts
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       if (e.key === 'Escape') {
         if (panicMode) { setPanicMode(false); return; }
         if (settingsOpen) { setSettingsOpen(false); return; }
@@ -191,10 +193,11 @@ function App() {
         setPanicMode(true);
         return;
       }
-      if (e.key === 'j' || e.key === 'J') { e.preventDefault(); navigateArticle(1); }
-      if (e.key === 'k' || e.key === 'K') { e.preventDefault(); navigateArticle(-1); }
-      if (e.key === 's' || e.key === 'S') setNotesOpen(true);
-      if (e.key === 'r' || e.key === 'R') {
+      const k = e.key.toLowerCase();
+      if (k === 'j') { e.preventDefault(); navigateArticle(1); }
+      if (k === 'k') { e.preventDefault(); navigateArticle(-1); }
+      if (k === 's') setNotesOpen(true);
+      if (k === 'r') {
         if (focusedArticleId) handleRefineWithAI(focusedArticleId);
       }
     };
@@ -258,18 +261,18 @@ function App() {
   const handleRefineWithAI = async (articleId) => {
     if (!groqKey) { alert('Add a Groq API key in Settings first.'); setSettingsOpen(true); return; }
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
-    try {
+      try {
       const art = articles.find(a => a.id === articleId);
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{
-            role: 'user',
-            content: `You are a web research assistant. Based on the article title "${art.title}" and snippet "${art.snippet}", perform a concise web search to gather up-to-date information about this topic. Provide 2-4 bullet points with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite the best-known references. Present results as plain text in the same format, no extraneous formatting.`
-          }]
-        }),
+            model: 'llama-3.3-70b-versatile',
+            messages: [{
+              role: 'user',
+              content: `Anchor to the linked article: ${art.title} (${art.link}). Based on the content of the linked article, perform a concise web search to gather up-to-date information about this topic. Prioritize findings related to the linked article. Provide 2-4 information bullets with sources (URLs) summarizing findings, followed by 1-2 sentence conclusion and 2-3 follow-up questions. If sources are unavailable, cite credible references. Present results as plain text, no extraneous formatting.`
+            }]
+          }),
       });
       const data = await res.json();
       const refined = data.choices[0].message.content;
