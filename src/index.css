@@ -392,15 +392,16 @@ html, body {
 /* Floating Auto-Scroll Button */
 .floating-auto-scroll {
   position: fixed;
-  bottom: 32px;
-  right: 32px;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 999;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 20px;
+  padding: 14px 28px;
   background: rgba(10, 10, 10, 0.95);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--accent-color);
   border-radius: 50px;
   color: var(--text-primary);
   font-size: 0.85rem;
@@ -409,7 +410,7 @@ html, body {
   letter-spacing: 0.8px;
   cursor: pointer;
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(59, 130, 246, 0.2);
   transition: all var(--transition-fast);
   user-select: none;
 }
