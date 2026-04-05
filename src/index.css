@@ -141,7 +141,46 @@ html, body {
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: clamp(8px, 2vw, 18px);
+}
+
+/* Mode toggle pill */
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 30px;
+  padding: 4px;
+  gap: 2px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  background: var(--accent-color);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.4);
 }
 
 /* BUTTONS */
@@ -277,24 +316,12 @@ html, body {
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
-.feed-container.focus-masked .article-card.unfocused {
+/* Doomscroll mode — dim unfocused cards */
+.feed-container.doomscroll-mode .article-card.unfocused {
   opacity: 0.3;
   filter: blur(2px) grayscale(50%) scale(0.97);
   pointer-events: none;
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* GHOST UI — subtle blur while doomscrolling */
-.feed-container.ghost-ui-active .article-card .article-content * {
-  opacity: 0.12;
-  filter: blur(3px);
-  transition: opacity 0.5s ease-in-out, filter 0.5s ease-in-out;
-}
-
-.feed-container.ghost-ui-active .article-card {
-  border-color: transparent;
-  background-color: rgba(10, 10, 10, 0.3);
-  transition: all 0.5s ease-in-out;
 }
 
 .article-media {
@@ -323,18 +350,13 @@ html, body {
   color: var(--text-secondary);
 }
 
-.article-category {
-  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.1));
-  padding: 6px 14px;
-  border-radius: 30px;
+.article-source {
+  font-size: 0.78rem;
+  font-weight: 600;
   text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 1px;
-}
-
-.article-category.ai-verified {
-  background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.2));
+  letter-spacing: 0.8px;
   color: var(--accent-color);
+  opacity: 0.8;
 }
 
 .article-title {

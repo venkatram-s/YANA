@@ -1,17 +1,13 @@
 import React from 'react';
-import { BookOpen, Search, Columns, Moon, Sun, Settings, PenSquare, Lock } from 'lucide-react';
+import { BookOpen, Search, Moon, Sun, Settings, PenSquare, Lock, Newspaper, Zap } from 'lucide-react';
 
-/**
- * Header component orchestrates global navigation and state-based visual toggles.
- * Structured with high-contrast accessibility and fluid typography.
- */
 export const Header = ({
   theme,
-  isWarRoom,
+  feedMode,
   isLocked,
   searchQuery,
   onSearchChange,
-  onToggleWarRoom,
+  onSetFeedMode,
   onToggleTheme,
   onOpenSettings,
   onOpenNotes,
@@ -34,13 +30,25 @@ export const Header = ({
     </div>
 
     <div className="header-actions">
-      <button
-        className={`btn-icon ${isWarRoom ? 'active' : ''}`}
-        onClick={onToggleWarRoom}
-        title="War Room Configuration"
-      >
-        <Columns size={20} />
-      </button>
+      <div className="mode-toggle">
+        <button
+          className={`mode-btn ${feedMode === 'ordinary' ? 'active' : ''}`}
+          onClick={() => onSetFeedMode('ordinary')}
+          title="Ordinary News"
+        >
+          <Newspaper size={15} />
+          <span>News</span>
+        </button>
+        <button
+          className={`mode-btn ${feedMode === 'doomscroll' ? 'active' : ''}`}
+          onClick={() => onSetFeedMode('doomscroll')}
+          title="Doomscrolling"
+        >
+          <Zap size={15} />
+          <span>Doomscroll</span>
+        </button>
+      </div>
+
       <button
         className="btn-icon"
         onClick={onToggleTheme}
@@ -51,14 +59,14 @@ export const Header = ({
       <button
         className="btn-icon"
         onClick={onOpenSettings}
-        title="Settings & Enclave"
+        title="Settings"
       >
         <Settings size={20} />
       </button>
       <button
         className="btn-icon"
         onClick={onOpenNotes}
-        title="Encrypted Intelligence Vault"
+        title="Encrypted Notes Vault"
       >
         {isLocked ? <Lock size={20} color="#ef4444" /> : <PenSquare size={20} />}
       </button>

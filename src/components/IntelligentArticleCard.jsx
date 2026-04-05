@@ -1,14 +1,10 @@
 import React from 'react';
 import { Volume2, VolumeX, Mic, Bot, Loader2 } from 'lucide-react';
 
-/**
- * IntelligentArticleCard component handles individual news items, 
- * including X-Ray, TTS playback, and user interactions.
- */
 export const IntelligentArticleCard = ({
   article,
   isFocused,
-  isWarRoom,
+  isDoomscroll,
   ttsActiveId,
   isDictating,
   xrayActiveId,
@@ -25,20 +21,20 @@ export const IntelligentArticleCard = ({
 
   return (
     <article
-      className={`article-card ${!isFocused && !isWarRoom ? 'unfocused' : ''}`}
+      className={`article-card ${!isFocused && isDoomscroll ? 'unfocused' : ''}`}
       data-id={article.id}
       onMouseEnter={() => onHover(article.id)}
       onMouseLeave={onLeave}
     >
-      <div 
+      <div
         onPointerDown={() => onPointerDown(article)}
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
       >
         {article.image && (
-          <img src={article.image} alt="High-Resolution Dispatch Thumbnail" className="article-media" />
+          <img src={article.image} alt="" className="article-media" />
         )}
-        
+
         {isXrayActive && (
           <div className="x-ray-overlay">
             <div className="x-ray-title">⚡ Intelligent Entity Extraction</div>
@@ -53,36 +49,43 @@ export const IntelligentArticleCard = ({
 
         <div className="article-content">
           <div className="article-meta">
-            <span className={`article-category ${article.aiRefined ? 'ai-verified' : ''}`}>
-              {article.category}
-            </span>
+            <span className="article-source">{article.source || 'Feed'}</span>
             <span>{new Date(article.pubDate).toLocaleDateString()}</span>
           </div>
           <h2 className="article-title">{article.title}</h2>
           <p className="article-snippet">{article.snippet}</p>
-          
+
           <div className="article-actions">
             <button className="btn-primary" onClick={() => onToggleTTS(article)}>
               {isTtsActive ? <VolumeX size={16} /> : <Volume2 size={16} />}
               {isTtsActive ? 'Suspend' : 'Listen'}
             </button>
-            <button className="btn-icon" title="Refine with AI Intelligence" onClick={() => onRefineWithAI(article.id)} disabled={article.loading}>
-              {article.loading ? <Loader2 size={18} className="spin" color="var(--accent-color)" /> : <Bot size={18} color={article.aiRefined ? 'var(--accent-color)' : 'var(--text-secondary)'} />}
+            <button
+              className="btn-icon"
+              title="Refine with AI"
+              onClick={() => onRefineWithAI(article.id)}
+              disabled={article.loading}
+            >
+              {article.loading
+                ? <Loader2 size={18} className="spin" color="var(--accent-color)" />
+                : <Bot size={18} color={article.aiRefined ? 'var(--accent-color)' : 'var(--text-secondary)'} />
+              }
             </button>
             {isTtsActive && window.SpeechRecognition && (
-              <button 
-                className={`btn-icon ${isDictating ? 'recording' : ''}`} 
-                title="Dictate Intelligence Thought" 
+              <button
+                className={`btn-icon ${isDictating ? 'recording' : ''}`}
+                title="Dictate note"
                 onClick={onStartDictation}
               >
                 <Mic size={18} />
               </button>
             )}
           </div>
-          {isDictating && isTtsActive && <div className="voice-note-transcribing">Capturing Thought Stream...</div>}
+          {isDictating && isTtsActive && (
+            <div className="voice-note-transcribing">Capturing Thought Stream...</div>
+          )}
         </div>
       </div>
     </article>
   );
 };
-  
