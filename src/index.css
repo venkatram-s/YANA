@@ -222,9 +222,6 @@ html, body {
   text-decoration: underline;
 }
 
-.feed-container.news-mode .card-actions {
-  display: none;
-}
 
 .feed-container.news-mode .card-snippet {
   display: -webkit-box;

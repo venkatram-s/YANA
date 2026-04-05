@@ -83,6 +83,7 @@ function App() {
     localStorage.setItem('groq_api_key', groqKey);
   }, [groqKey]);
 
+  const autoScrollDelay = useRef(null);
   const startScroll = useCallback(() => {
     clearInterval(scrollIntervalRef.current);
     setIsAutoScrolling(true);
@@ -108,12 +109,21 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (feedMode !== 'doomscroll') {
+    // Auto-start doomscroll when content is ready
+    if (feedMode === 'doomscroll' && articles.length > 0) {
+      if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
+      autoScrollDelay.current = setTimeout(() => {
+        if (!isAutoScrolling) startScroll();
+      }, 250);
+    } else {
       stopScroll();
       feedContainerRef.current?.scrollTo({ top: 0 });
     }
-    return () => clearInterval(scrollIntervalRef.current);
-  }, [feedMode, stopScroll]);
+    return () => {
+      if (autoScrollDelay.current) clearTimeout(autoScrollDelay.current);
+      // Do not null scrollInterval here; the caller will clear on unmount
+    };
+  }, [feedMode, articles.length, startScroll, stopScroll, isAutoScrolling]);
 
   useEffect(() => {
     const boot = async () => {
