@@ -1,93 +1,188 @@
-import React from 'react';
-import { X, Trash, Plus, ShieldAlert } from 'lucide-react';
+import React, { useRef } from 'react';
+import { X, Trash, Plus, ShieldAlert, Download, Upload, ImageOff, Image } from 'lucide-react';
 
-/**
- * SettingsModal component provides a high-contrast localized management interface.
- */
 export const SettingsModal = ({
   isOpen,
   rssFeeds,
   newRssUrl,
   groqKey,
+  noImageMode,
   onClose,
   onAddFeed,
   onRemoveFeed,
   onUrlChange,
   onGroqKeyChange,
+  onToggleNoImage,
+  onExportOPML,
+  onImportOPML,
   onHardReset,
 }) => {
+  const fileInputRef = useRef(null);
+
   if (!isOpen) return null;
 
   return (
     <div className="x-ray-overlay" style={{ justifyContent: 'center' }}>
-      <div 
+      <div
         style={{
-          background: 'var(--surface-color)', 
-          padding: '30px', 
-          borderRadius: '16px', 
-          width: '500px', 
-          maxWidth: '96vw', 
-          maxHeight: '85vh', 
-          overflowY: 'auto'
-        }} 
+          background: 'var(--surface-color)',
+          padding: '30px',
+          borderRadius: '16px',
+          width: '520px',
+          maxWidth: '96vw',
+          maxHeight: '88vh',
+          overflowY: 'auto',
+          border: '1px solid var(--border-color)',
+        }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-          <h2 style={{ color: 'var(--text-primary)' }}>Enclave Configurations</h2>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ color: 'var(--text-primary)' }}>Settings</h2>
           <button className="btn-icon" onClick={onClose}><X size={24} /></button>
         </div>
-        
-        <div style={{ marginBottom: '30px' }}>
-          <h3 style={{ color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '1rem' }}>Active Intelligence Feeds</h3>
-          <ul style={{ listStyle: 'none', padding: 0, marginBottom: '15px' }}>
+
+        {/* RSS Feeds */}
+        <section style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              RSS Feeds
+            </h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="btn-icon"
+                title="Export as OPML"
+                onClick={onExportOPML}
+                style={{ fontSize: '0.75rem', gap: '4px', display: 'flex', alignItems: 'center', color: 'var(--accent-color)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px 10px' }}
+              >
+                <Download size={14} /> OPML
+              </button>
+              <button
+                className="btn-icon"
+                title="Import OPML"
+                onClick={() => fileInputRef.current?.click()}
+                style={{ fontSize: '0.75rem', gap: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px 10px' }}
+              >
+                <Upload size={14} /> Import
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".opml,.xml"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onImportOPML(file);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+          </div>
+
+          <ul style={{ listStyle: 'none', padding: 0, marginBottom: '12px' }}>
+            {rssFeeds.length === 0 && (
+              <li style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px', textAlign: 'center' }}>
+                No feeds added yet
+              </li>
+            )}
             {rssFeeds.map(feed => (
-              <li key={feed} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'var(--surface-hover)', borderRadius: '8px', marginBottom: '8px' }}>
-                <span style={{ color: 'var(--text-primary)', wordBreak: 'break-all', fontSize: '0.85rem' }}>{feed}</span>
-                <button className="btn-icon" style={{ padding: '0 8px' }} onClick={() => onRemoveFeed(feed)}>
-                  <Trash size={16} color="#ef4444" />
+              <li
+                key={feed}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'var(--surface-hover)', borderRadius: '8px', marginBottom: '6px' }}
+              >
+                <span style={{ color: 'var(--text-primary)', wordBreak: 'break-all', fontSize: '0.83rem', flex: 1 }}>{feed}</span>
+                <button className="btn-icon" style={{ padding: '0 8px', flexShrink: 0 }} onClick={() => onRemoveFeed(feed)}>
+                  <Trash size={15} color="#ef4444" />
                 </button>
               </li>
             ))}
           </ul>
-          
+
           <div style={{ display: 'flex', gap: '10px' }}>
-            <input 
-              type="text" 
-              className="search-input" 
-              style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', width: '100%' }} 
-              placeholder="Inject RSS Protocol Source..." 
+            <input
+              type="text"
+              className="search-input"
+              style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', flex: 1 }}
+              placeholder="Paste RSS feed URL..."
               value={newRssUrl}
               onChange={(e) => onUrlChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onAddFeed()}
             />
-            <button className="btn-primary" onClick={onAddFeed}><Plus size={16} /></button>
+            <button className="btn-primary" onClick={onAddFeed} style={{ flexShrink: 0 }}>
+              <Plus size={16} />
+            </button>
           </div>
-        </div>
+        </section>
 
-        <div style={{ marginBottom: '30px' }}>
-          <h3 style={{ color: 'var(--text-secondary)', marginBottom: '10px', fontSize: '1rem' }}>AI Intelligence Bridge (Groq)</h3>
-          <input 
-            type="password" 
-            className="search-input" 
-            style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', width: '100%' }} 
-            placeholder="gsk_Vault_Access_Token..." 
+        {/* Display Options */}
+        <section style={{ marginBottom: '28px' }}>
+          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+            Display
+          </h3>
+          <div
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--surface-hover)', borderRadius: '10px', cursor: 'pointer' }}
+            onClick={onToggleNoImage}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {noImageMode ? <ImageOff size={18} color="var(--accent-color)" /> : <Image size={18} color="var(--text-secondary)" />}
+              <div>
+                <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>No-Image Mode</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Pure text, Wall of Information</div>
+              </div>
+            </div>
+            <div className={`toggle-switch ${noImageMode ? 'on' : ''}`}></div>
+          </div>
+        </section>
+
+        {/* Groq AI */}
+        <section style={{ marginBottom: '28px' }}>
+          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+            AI (Groq)
+          </h3>
+          <input
+            type="password"
+            className="search-input"
+            style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', width: '100%' }}
+            placeholder="Groq API Key..."
             value={groqKey}
             onChange={(e) => onGroqKeyChange(e.target.value)}
           />
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '10px' }}>
-            Used for deep-extraction heuristics and entity refinement.
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+            Used only when you manually click Refine on an article.
           </p>
-        </div>
+        </section>
 
-        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-          <button 
-             className="btn-icon" 
-             style={{ color: '#ef4444', border: '1px solid #ef4444', width: '100%', borderRadius: '8px', padding: '12px' }} 
-             onClick={onHardReset}
+        {/* Keyboard Shortcuts */}
+        <section style={{ marginBottom: '28px' }}>
+          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+            Keyboard Shortcuts
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {[
+              ['J', 'Next article'],
+              ['K', 'Previous article'],
+              ['R', 'AI Refine focused'],
+              ['S', 'Open notes'],
+              ['Esc', 'Panic mode'],
+            ].map(([key, desc]) => (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
+                <kbd style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '5px', padding: '3px 8px', fontSize: '0.78rem', fontFamily: 'monospace', color: 'var(--accent-color)', fontWeight: 700, flexShrink: 0 }}>{key}</kbd>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Danger Zone */}
+        <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+          <button
+            className="btn-icon"
+            style={{ color: '#ef4444', border: '1px solid #ef4444', width: '100%', borderRadius: '8px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            onClick={onHardReset}
           >
-            <ShieldAlert size={18} style={{ marginRight: '8px' }} /> Catastrophic Reset & Sterilization
+            <ShieldAlert size={18} /> Reset All Data
           </button>
-        </div>
+        </section>
       </div>
     </div>
   );

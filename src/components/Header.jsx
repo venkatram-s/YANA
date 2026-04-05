@@ -1,11 +1,12 @@
 import React from 'react';
-import { BookOpen, Search, Moon, Sun, Settings, PenSquare, Lock, Newspaper, Zap } from 'lucide-react';
+import { BookOpen, Search, Moon, Sun, Settings, PenSquare, Lock, Newspaper, Zap, Flame } from 'lucide-react';
 
 export const Header = ({
   theme,
   feedMode,
   isLocked,
   searchQuery,
+  streak,
   onSearchChange,
   onSetFeedMode,
   onToggleTheme,
@@ -16,13 +17,19 @@ export const Header = ({
     <div className="logo-container">
       <BookOpen className="logo-icon" size={28} color="var(--accent-color)" />
       <h1 className="logo-text">YANA <span>V3</span></h1>
+      {streak > 0 && (
+        <div className="streak-badge" title={`${streak}-day reading streak`}>
+          <Flame size={13} />
+          <span>{streak}</span>
+        </div>
+      )}
     </div>
 
     <div className="search-container">
       <Search size={18} color="var(--text-muted)" />
       <input
         type="text"
-        placeholder="Adaptive Search..."
+        placeholder="Search..."
         className="search-input"
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
@@ -49,25 +56,13 @@ export const Header = ({
         </button>
       </div>
 
-      <button
-        className="btn-icon"
-        onClick={onToggleTheme}
-        title="Toggle Visual Identity"
-      >
+      <button className="btn-icon" onClick={onToggleTheme} title="Toggle theme">
         {theme === 'black' ? <Moon size={20} /> : <Sun size={20} />}
       </button>
-      <button
-        className="btn-icon"
-        onClick={onOpenSettings}
-        title="Settings"
-      >
+      <button className="btn-icon" onClick={onOpenSettings} title="Settings">
         <Settings size={20} />
       </button>
-      <button
-        className="btn-icon"
-        onClick={onOpenNotes}
-        title="Encrypted Notes Vault"
-      >
+      <button className="btn-icon" onClick={onOpenNotes} title="Notes Vault">
         {isLocked ? <Lock size={20} color="#ef4444" /> : <PenSquare size={20} />}
       </button>
     </div>
