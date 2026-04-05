@@ -112,14 +112,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (feedMode === 'doomscroll' && articles.length > 0) {
-      // Small delay to ensure content is rendered
-      setTimeout(() => startScroll(), 100);
-    } else {
+    if (feedMode !== 'doomscroll') {
       stopScroll();
+      feedContainerRef.current?.scrollTo({ top: 0 });
     }
     return () => clearInterval(scrollIntervalRef.current);
-  }, [feedMode, articles.length, startScroll, stopScroll]);
+  }, [feedMode, stopScroll]);
 
   useEffect(() => {
     const boot = async () => {

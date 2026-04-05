@@ -51,10 +51,28 @@ export default defineConfig({
     port: 5000,
     allowedHosts: true,
     proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
+      '/api/rss-proxy': {
+        target: 'https://corsproxy.io/?',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        rewrite: (path) => {
+          const urlParam = new URLSearchParams(path.split('?').slice(1).join('?')).get('url');
+          return urlParam;
+        },
+        selfHandleResponse: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            let body = '';
+            proxyRes.on('data', (chunk) => body += chunk);
+            proxyRes.on('end', () => {
+              res.writeHead(200, {
+                'Content-Type': proxyRes.headers['content-type'] || 'text/xml; charset=utf-8',
+                'Access-Control-Allow-Origin': '*',
+                'Cache-Control': 's-maxage=600, stale-while-revalidate=1200'
+              });
+              res.end(body);
+            });
+          });
+        }
       }
     }
   },
