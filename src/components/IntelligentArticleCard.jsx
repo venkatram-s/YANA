@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, Bot, Loader2, PenSquare, Share2 } from 'lucide-react';
+import { Volume2, VolumeX, Bot, Loader as Loader2, SquarePen as PenSquare, Share2 } from 'lucide-react';
 
 function bionicText(text) {
   if (!text) return null;
@@ -55,6 +55,8 @@ export const IntelligentArticleCard = ({
       onPointerDown={() => onPointerDown(article)}
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
+      onTouchStart={() => onHover(article.id)}
+      onTouchEnd={onLeave}
     >
       <div className="card-overlay" />
 

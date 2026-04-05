@@ -91,9 +91,19 @@ function App() {
     clearInterval(scrollIntervalRef.current);
     setIsAutoScrolling(true);
     scrollIntervalRef.current = setInterval(() => {
+      if (isHoveringRef.current) return; // Don't scroll when hovering
       const c = feedContainerRef.current;
-      if (c) c.scrollBy({ top: 2, behavior: 'auto' });
-    }, 30);
+      if (c) {
+        const currentScroll = c.scrollTop;
+        const maxScroll = c.scrollHeight - c.clientHeight;
+        if (currentScroll >= maxScroll - 10) {
+          // Stop at bottom to prevent infinite scroll
+          stopScroll();
+          return;
+        }
+        c.scrollBy({ top: 1, behavior: 'auto' });
+      }
+    }, 50);
   }, []);
 
   const stopScroll = useCallback(() => {
@@ -102,10 +112,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (feedMode === 'doomscroll') startScroll();
-    else stopScroll();
+    if (feedMode === 'doomscroll' && articles.length > 0) {
+      // Small delay to ensure content is rendered
+      setTimeout(() => startScroll(), 100);
+    } else {
+      stopScroll();
+    }
     return () => clearInterval(scrollIntervalRef.current);
-  }, [feedMode, startScroll, stopScroll]);
+  }, [feedMode, articles.length, startScroll, stopScroll]);
 
   useEffect(() => {
     const boot = async () => {
@@ -154,7 +168,10 @@ function App() {
   useEffect(() => {
     const container = feedContainerRef.current;
     if (!container) return;
+    
+    // Clear previous observer
     observerRef.current?.disconnect();
+    
     observerRef.current = new IntersectionObserver((entries) => {
       if (isHoveringRef.current || feedMode !== 'doomscroll') return;
       let best = null;
@@ -167,6 +184,12 @@ function App() {
       });
       if (best && bestRatio > 0.7) setFocusedArticleId(best.getAttribute('data-id'));
     }, { root: container, threshold: [0.3, 0.5, 0.7, 1] });
+    
+    // Only observe if in doomscroll mode
+    if (feedMode === 'doomscroll') {
+      container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
+    }
+    
     container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
     return () => observerRef.current?.disconnect();
   }, [articles, feedMode]);
