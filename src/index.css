@@ -863,6 +863,8 @@ html, body {
     grid-template-columns: 1fr;
     gap: 10px;
     padding: 10px 12px;
+    background: #000000 !important;
+    border-bottom: 1px solid var(--border-color);
   }
 
   .logo-text {
@@ -872,6 +874,8 @@ html, body {
   .mode-toggle {
     width: 100%;
     justify-content: center;
+    background: #111111 !important;
+    border: 1px solid var(--border-color);
   }
 
   .mode-btn {
@@ -882,6 +886,8 @@ html, body {
   .search-container {
     max-width: 100%;
     padding: 8px 12px;
+    background: #111111 !important;
+    border: 1px solid var(--border-color);
   }
 
   .search-input {
@@ -897,6 +903,8 @@ html, body {
   .btn-icon {
     width: 36px;
     height: 36px;
+    background: #111111 !important;
+    border: 1px solid var(--border-color);
   }
 
   /* Doomscroll mobile fixes */
