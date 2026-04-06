@@ -48,11 +48,11 @@ html, body {
   align-items: center;
   gap: 20px;
   padding: 14px clamp(16px, 5vw, 40px);
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
   pointer-events: none;
 }
 
@@ -284,11 +284,13 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.7);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   max-width: 480px;
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 .search-input {
@@ -314,10 +316,11 @@ html, body {
 .mode-toggle {
   display: flex;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.6);
   padding: 4px;
   border-radius: 10px;
   border: 1px solid var(--border-color);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 .mode-btn {
