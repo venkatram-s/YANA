@@ -48,9 +48,11 @@ html, body {
   align-items: center;
   gap: 20px;
   padding: 14px clamp(16px, 5vw, 40px);
-  background: linear-gradient(to bottom, rgba(0,0,0,0.9), rgba(0,0,0,0.35), transparent);
-  border-bottom: none;
-  box-shadow: none;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
   pointer-events: none;
 }
 
