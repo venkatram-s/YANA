@@ -859,53 +859,168 @@ html, body {
 @media (max-width: 768px) {
   .app-header {
     grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 10px;
+    padding: 10px 12px;
   }
-  
-  .feed-container {
-    padding: 0;
+
+  .logo-text {
+    font-size: 1.2rem;
+  }
+
+  .mode-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .mode-btn {
+    padding: 6px 10px;
+    font-size: 0.7rem;
   }
 
   .search-container {
     max-width: 100%;
+    padding: 8px 12px;
+  }
+
+  .search-input {
+    font-size: 0.85rem;
   }
 
   .header-actions {
-    justify-content: space-between;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Doomscroll mobile fixes */
+  .feed-container.doomscroll-mode {
+    padding-top: 0;
+  }
+
+  .article-card {
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
   }
 
   .card-bottom {
-    flex-direction: column;
+    padding: 16px 14px 28px;
+    gap: 12px;
     align-items: flex-start;
-    gap: 16px;
+  }
+
+  .card-content {
+    width: 100%;
+  }
+
+  .card-title {
+    font-size: clamp(1rem, 5vw, 1.5rem);
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .card-snippet {
+    font-size: clamp(0.8rem, 3.5vw, 0.92rem);
+    line-height: 1.5;
   }
 
   .card-actions {
     flex-direction: row;
     width: 100%;
     justify-content: space-around;
-  }
-  
-  .card-title {
-    font-size: clamp(1.2rem, 4vw, 1.6rem);
-    line-height: 1.25;
-  }
-  
-  .card-snippet {
-    font-size: clamp(0.9rem, 3vw, 1rem);
-    line-height: 1.5;
+    gap: 8px;
   }
 
-  .floating-auto-scroll {
-    bottom: 20px;
-    right: 20px;
-    padding: 12px 16px;
-    font-size: 0.75rem;
+  .card-action-btn {
+    gap: 3px;
+  }
+
+  .card-action-btn span {
+    font-size: 0.55rem;
+  }
+
+  .card-action-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .readmore-link {
+    font-size: 0.65rem;
+  }
+
+  /* News mode mobile */
+  .feed-container.news-mode {
+    padding: 110px 10px 80px;
+  }
+
+  .feed-container.news-mode .article-card {
+    max-width: 100%;
+    border-radius: 14px;
+  }
+
+  .feed-container.news-mode .card-bottom {
+    padding: 14px 14px 18px;
   }
 
   .notes-panel {
     max-width: 100%;
+  }
+}
+
+/* Small phone screens */
+@media (max-width: 400px) {
+  .app-header {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .logo-text {
+    font-size: 1.1rem;
+  }
+
+  .mode-btn {
+    padding: 5px 8px;
+    font-size: 0.65rem;
+  }
+
+  .mode-btn span {
+    display: none; /* Hide text, show only icons on very small screens */
+  }
+
+  .feed-container.news-mode {
+    padding: 100px 8px 70px;
+  }
+
+  .feed-container.news-mode .article-card {
+    border-radius: 10px;
+  }
+
+  .card-bottom {
+    padding: 12px 10px 24px;
+  }
+
+  .card-title {
+    font-size: clamp(0.95rem, 5.5vw, 1.3rem);
+  }
+
+  .card-snippet {
+    font-size: 0.78rem;
+  }
+
+  .card-actions {
+    gap: 4px;
+  }
+
+  .card-action-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .card-action-btn span {
+    font-size: 0.5rem;
   }
 }
 
@@ -943,22 +1058,4 @@ html, body {
   --surface-color: #2a2a2a;
   --surface-hover: #333333;
   --border-color: #404040;
-}
-
-/* Responsive tweaks for doomscroll and normal mode */
-@media (max-width: 600px) {
-  .card-title {
-    font-size: clamp(1.1rem, 4vw, 1.4rem);
-  }
-  .card-snippet {
-    font-size: 0.9rem;
-  }
-  .floating-auto-scroll {
-    bottom: 12px;
-    right: 12px;
-    padding: 10px 14px;
-  }
-  .feed-container.news-mode {
-    padding: 70px 12px 60px;
-  }
 }
