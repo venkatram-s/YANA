@@ -97,22 +97,22 @@ function App() {
   }, []);
 
   const refreshFeeds = useCallback(async (targetFeeds) => {
-    const feedsToFetch = targetFeeds || rssFeeds;
-    if ((!feedsToFetch || feedsToFetch.length === 0)) {
-        setLoading(false);
-        return;
+    const currentRss = targetFeeds || rssFeeds;
+    if (!currentRss || currentRss.length === 0) {
+      setLoading(false);
+      return;
     }
     setLoading(true);
     triggerGlitch();
     try {
-      const all = await Promise.all(
-        feedsToFetch.map(f => fetchRssContent(f.url, f.name).catch(() => []))
+      const allResolved = await Promise.all(
+        currentRss.map(f => fetchRssContent(f.url).catch(() => []))
       );
-      const agg = all.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-      setArticles(agg);
-      if (agg.length > 0) triggerGlitch();
+      const combined = allResolved.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      setArticles(combined);
+      if (combined.length > 0) triggerGlitch();
     } catch (err) {
-      console.error('Refresh Failed:', err);
+      console.error('YANA REFRESH FAILED:', err);
     } finally {
       setLoading(false);
     }
@@ -135,13 +135,13 @@ function App() {
         }
         setRssFeeds(currentFeeds);
         
-        // Initial fetch after DB is ready
+        // Immediate fetch after DB yield
         refreshFeeds(currentFeeds);
 
         const cachedNotes = await dbBroker.getItem('encryptedNotes');
         if (cachedNotes) setNotes(cachedNotes);
       } catch (err) {
-        console.error('YANA DB INIT FAILED:', err);
+        console.error('YANA DB BOOTSTRAP FAILED:', err);
         setLoading(false);
       }
     };
@@ -213,16 +213,16 @@ function App() {
   const handleUnlockVault = useCallback(async () => {
     if (!cryptoPassword) return;
     try {
-      const enc = await dbBroker.getItem('encryptedNotes');
-      if (!enc) { setVaultLocked(false); return; }
-      const decrypted = await cryptoTool.decryptData(enc, cryptoPassword);
+      const encPackage = await dbBroker.getItem('encryptedNotes');
+      if (!encPackage) { setVaultLocked(false); return; }
+      const decrypted = await cryptoTool.decryptData(encPackage, cryptoPassword);
       if (decrypted) {
           setNotes(JSON.parse(decrypted));
           setVaultLocked(false);
           setFailedAttempts(0);
       }
     } catch (e) {
-      console.error("Vault unlock error:", e);
+      console.error("YANA CRYPTO FAILURE:", e);
       const f = failedAttempts + 1;
       setFailedAttempts(f);
       if (f >= 3) {
@@ -230,7 +230,7 @@ function App() {
         localStorage.clear();
         window.location.reload();
       } else {
-        alert(`ACCESS_DENIED: Attempt ${f}/3`);
+        alert(`ACCESS_DENIED: ${3 - f} attempts remaining.`);
       }
     }
   }, [cryptoPassword, failedAttempts, dbBroker, cryptoTool]);
@@ -292,7 +292,9 @@ function App() {
           <div className="skeleton-grid">{[1, 2, 3, 4, 5, 6].map(i => <SkeletonLoader key={i} />)}</div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <button className="btn-primary" onClick={() => refreshFeeds()}>Reconnect Feeds</button>
+             <h2>Intelligence Stream Empty</h2>
+             <p>Reconnecting to global dispatch nodes...</p>
+            <button className="btn-primary" onClick={() => refreshFeeds()}>Reconnect Now</button>
           </div>
         ) : (
           filtered.map(article => (
@@ -314,7 +316,7 @@ function App() {
         )}
       </main>
 
-      <BottomNav feedMode={feedMode} onSetFeedMode={setFeedMode} onOpenVault={() => setNotesOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+      <BottomNav onSetFeedMode={setFeedMode} onOpenVault={() => setNotesOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
 
       <NotesVault 
         isOpen={notesOpen}
@@ -359,7 +361,10 @@ function App() {
         onAiToneChange={setAiTone}
         customCss={customCss}
         onCustomCssChange={setCustomCss}
-        onHardReset={() => { localStorage.clear(); dbBroker.purgeDatabase(); window.location.reload(); }}
+        onHardReset={() => { 
+            localStorage.clear(); 
+            dbBroker.purgeDatabase().then(() => window.location.reload());
+        }}
       />
     </div>
   );
