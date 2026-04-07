@@ -219,7 +219,11 @@ function App() {
     if (!cryptoPassword) return;
     try {
       const encPackage = await dbBroker.getItem('encryptedNotes');
-      if (!encPackage) { setVaultLocked(false); return; }
+      if (!encPackage) { 
+          // If no package exists, we just unlock an empty vault
+          setVaultLocked(false); 
+          return; 
+      }
       const decrypted = await cryptoTool.decryptData(encPackage, cryptoPassword);
       if (decrypted) {
           setNotes(JSON.parse(decrypted));
@@ -233,6 +237,7 @@ function App() {
       if (f >= 3) {
         await dbBroker.purgeDatabase();
         localStorage.clear();
+        alert("VAULT_WIPED_AFTER_3_FAILURES");
         window.location.reload();
       } else {
         alert(`ACCESS_DENIED: ${3 - f} attempts remaining.`);
@@ -273,8 +278,12 @@ function App() {
   }, [vaultLocked, cryptoPassword, cryptoTool, dbBroker]);
 
   const filtered = useMemo(() => {
-     const query = searchQuery.toLowerCase();
-     return articles.filter(a => a.title.toLowerCase().includes(query) || a.snippet.toLowerCase().includes(query));
+     const query = searchQuery?.toLowerCase() || '';
+     return articles.filter(a => {
+         const t = a.title?.toLowerCase() || '';
+         const s = a.snippet?.toLowerCase() || '';
+         return t.includes(query) || s.includes(query);
+     });
   }, [articles, searchQuery]);
 
   // Update filteredRef for navigation
@@ -324,7 +333,14 @@ function App() {
         )}
       </main>
 
-      <BottomNav onSetFeedMode={setFeedMode} onOpenVault={() => setNotesOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
+      <BottomNav 
+        feedMode={feedMode} 
+        onSetFeedMode={setFeedMode} 
+        onOpenNotes={() => setNotesOpen(true)} 
+        onOpenSettings={() => setSettingsOpen(true)} 
+        isLocked={vaultLocked}
+        onFocusSearch={() => searchRef.current?.focus()}
+      />
 
       <NotesVault 
         isOpen={notesOpen}
