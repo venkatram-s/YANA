@@ -17,6 +17,8 @@ export const SettingsModal = ({
   secondaryColor,
   onPrimaryColorChange,
   onSecondaryColorChange,
+  aiTone,
+  onAiToneChange,
   customCss,
   onCustomCssChange,
   onExportOPML,
