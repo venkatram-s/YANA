@@ -67,12 +67,12 @@ export default defineConfig({
               return 'http://127.0.0.1/blocked'; 
             }
             return urlParam;
-          } catch (e) {
+          } catch {
             return '';
           }
         },
         selfHandleResponse: true,
-        configure: (proxy, _options) => {
+        configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes, req, res) => {
             let body = '';
             proxyRes.on('data', (chunk) => body += chunk);

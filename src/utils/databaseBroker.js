@@ -35,7 +35,7 @@ export class DatabaseBroker {
                         db.createObjectStore(this.storeName);
                     }
                 };
-            } catch (err) {
+            } catch {
                 this.isMemoryOnly = true;
                 resolve(null);
             }
@@ -56,7 +56,7 @@ export class DatabaseBroker {
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => resolve(this.memoryStore.get(key));
             });
-        } catch (err) {
+        } catch {
             return this.memoryStore.get(key);
         }
     }
@@ -84,7 +84,7 @@ export class DatabaseBroker {
                     resolve(true);
                 };
             });
-        } catch (err) {
+        } catch {
             this.memoryStore.set(key, payload);
             return true;
         }

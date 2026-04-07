@@ -64,7 +64,7 @@ export class CryptoHarden {
                 new Uint8Array(cipher)
             );
             return this.decoder.decode(decryptedContent);
-        } catch (error) {
+        } catch {
             throw new Error("CRYPTOGRAPHIC_FAILURE");
         }
     }

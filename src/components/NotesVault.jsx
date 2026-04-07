@@ -94,7 +94,7 @@ export const NotesVault = ({
               <Trash size={18} color="#ef4444" />
             </button>
             <button className="btn-icon" onClick={onClose}>
-              <X size(20) />
+              <X size={20} />
             </button>
           </div>
         </div>
