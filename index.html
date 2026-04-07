@@ -29,6 +29,14 @@
         window.onerror("PROMISE_REJECTION: " + event.reason, "", 0, 0, event.reason);
       };
     </script>
+    <script>
+      // 🛑 EMERGENCY CACHE PURGE: Annihilates old phantom bundles causing 'w is not a function' cache-traps
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) { registration.unregister(); }
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
