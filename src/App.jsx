@@ -69,6 +69,7 @@ function App() {
   const feedContainerRef = useRef(null);
   const searchRef = useRef(null);
   const filteredRef = useRef([]);
+  const hasInitializedRef = useRef(false);
 
   // Load custom CSS
   useEffect(() => {
@@ -96,9 +97,8 @@ function App() {
     setTimeout(() => setIsGlitching(false), 300);
   }, []);
 
-  const refreshFeeds = useCallback(async (targetFeeds) => {
-    const currentRss = targetFeeds || rssFeeds;
-    if (!currentRss || currentRss.length === 0) {
+  const refreshFeedsInternal = useCallback(async (targetFeeds) => {
+    if (!targetFeeds || targetFeeds.length === 0) {
       setLoading(false);
       return;
     }
@@ -106,7 +106,7 @@ function App() {
     triggerGlitch();
     try {
       const allResolved = await Promise.all(
-        currentRss.map(f => fetchRssContent(f.url).catch(() => []))
+        targetFeeds.map(f => fetchRssContent(f.url).catch(() => []))
       );
       const combined = allResolved.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
       setArticles(combined);
@@ -116,10 +116,15 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [rssFeeds, triggerGlitch]);
+  }, [triggerGlitch]);
 
-  // Load Feeds and Settings from DB
+  const refreshFeeds = useCallback(() => refreshFeedsInternal(rssFeeds), [rssFeeds, refreshFeedsInternal]);
+
+  // Load Feeds and Settings from DB (One-time only)
   useEffect(() => {
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
     const initDB = async () => {
       try {
         const feeds = await dbBroker.getItem('rssFeeds');
@@ -135,8 +140,8 @@ function App() {
         }
         setRssFeeds(currentFeeds);
         
-        // Immediate fetch after DB yield
-        refreshFeeds(currentFeeds);
+        // Initial fetch directly from the DB result
+        refreshFeedsInternal(currentFeeds);
 
         const cachedNotes = await dbBroker.getItem('encryptedNotes');
         if (cachedNotes) setNotes(cachedNotes);
@@ -146,7 +151,7 @@ function App() {
       }
     };
     initDB();
-  }, [dbBroker, refreshFeeds]);
+  }, [dbBroker, refreshFeedsInternal]);
 
   const navigateArticle = useCallback((dir) => {
     const list = filteredRef.current;
@@ -268,11 +273,14 @@ function App() {
   }, [vaultLocked, cryptoPassword, cryptoTool, dbBroker]);
 
   const filtered = useMemo(() => {
-    const query = searchQuery.toLowerCase();
-    const result = articles.filter(a => a.title.toLowerCase().includes(query) || a.snippet.toLowerCase().includes(query));
-    filteredRef.current = result;
-    return result;
+     const query = searchQuery.toLowerCase();
+     return articles.filter(a => a.title.toLowerCase().includes(query) || a.snippet.toLowerCase().includes(query));
   }, [articles, searchQuery]);
+
+  // Update filteredRef for navigation
+  useEffect(() => {
+    filteredRef.current = filtered;
+  }, [filtered]);
 
   return (
     <div className={`yana-container ${isGlitching ? 'glitch-active' : ''}`}>
@@ -344,7 +352,7 @@ function App() {
           setRssFeeds(updated);
           setNewRssUrl('');
           await dbBroker.setItem('rssFeeds', updated);
-          refreshFeeds(updated);
+          refreshFeedsInternal(updated);
         }}
         onRemoveFeed={async (feed) => {
           const updated = rssFeeds.filter(f => f.id !== feed.id);
