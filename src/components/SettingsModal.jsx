@@ -169,9 +169,29 @@ export const SettingsModal = ({
 
         {/* Custom CSS */}
         <section style={{ marginBottom: '28px' }}>
-          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-            Custom Theme (CSS)
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              Custom Theme (CSS)
+            </h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn-icon" 
+                style={{ fontSize: '0.7rem', padding: '4px 8px', height: 'auto', width: 'auto', borderRadius: '6px' }}
+                onClick={() => onCustomCssChange(':root {\n  --accent-color: #6366f1;\n  --bg-color: #000000;\n  --surface-color: #0d0d0d;\n  --text-primary: #ffffff;\n}')}
+                title="Load hex template"
+              >
+                Template
+              </button>
+              <button 
+                className="btn-icon" 
+                style={{ fontSize: '0.7rem', padding: '4px 8px', height: 'auto', width: 'auto', borderRadius: '6px', color: '#ef4444' }}
+                onClick={() => onCustomCssChange('')}
+                title="Revert to default"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
           <textarea
             className="search-input"
             style={{ 
@@ -179,19 +199,20 @@ export const SettingsModal = ({
               borderRadius: '8px', 
               padding: '12px', 
               width: '100%', 
-              height: '100px', 
+              height: '120px', 
               fontFamily: 'monospace', 
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
               resize: 'vertical',
               background: 'transparent',
-              color: 'var(--text-primary)'
+              color: 'var(--text-primary)',
+              lineHeight: '1.5'
             }}
             placeholder=":root { --accent-color: #ff00ea; }"
             value={customCss}
             onChange={(e) => onCustomCssChange(e.target.value)}
           />
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Inject custom CSS here. Changes apply instantly.
+            Override variables to change colors. Buttons and UI elements adapt automatically.
           </p>
         </section>
 
