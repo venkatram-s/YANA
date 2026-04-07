@@ -7,6 +7,14 @@
 export default async function handler(req, res) {
   const { q } = req.query;
 
+  // Handle CORS preflight (OPTIONS) requests
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
+
   if (!q) {
     return res.status(400).json({ error: 'MISSING_QUERY: Search query required.' });
   }
@@ -48,6 +56,7 @@ export default async function handler(req, res) {
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
     res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(200).json({ query: q, results });
   } catch (error) {
     console.error(`WEB_SEARCH_EXCEPTION for [${q}]:`, error);

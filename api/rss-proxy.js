@@ -7,7 +7,7 @@
  */
 
 const MAX_RESPONSE_SIZE = 1 * 1024 * 1024; // 1MB limit for RSS XML
-const ALLOWED_PROTOCOLS = ['https:'];
+const ALLOWED_PROTOCOLS = ['https:', 'http:'];
 
 /**
  * Validates the URL to mitigate SSRF (Server-Side Request Forgery).
@@ -38,6 +38,14 @@ function validateUrl(urlStr) {
 
 export default async function handler(req, res) {
   const { url } = req.query;
+
+  // Handle CORS preflight (OPTIONS) requests
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
 
   if (!url) {
     return res.status(400).json({ error: 'CRITICAL_PAYLOAD_MISSING: RSS source URL required.' });
@@ -82,6 +90,9 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
     res.setHeader('Content-Type', 'text/xml; charset=utf-8');
     res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
     return res.status(200).send(xmlText);
   } catch (error) {

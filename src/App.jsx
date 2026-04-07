@@ -9,6 +9,7 @@ import { IntelligentArticleCard } from './components/IntelligentArticleCard';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
+import { getApiUrl } from './utils/config';
 
 
 // Success sound path
@@ -317,7 +318,7 @@ function App() {
       const searchQuery = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
       
       // Fetch live web search results via our serverless proxy
-      const searchRes = await fetch(`/api/web-search?q=${searchQuery}`);
+      const searchRes = await fetch(getApiUrl(`/api/web-search?q=${searchQuery}`));
       const searchData = await searchRes.json();
       
       if (searchData.error) throw new Error(searchData.error);

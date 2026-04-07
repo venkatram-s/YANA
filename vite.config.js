@@ -62,7 +62,7 @@ export default defineConfig({
             const url = new URL(urlParam);
             // Block local/private access during dev
             const isLocal = /localhost|^127\.|^192\.168\.|^10\./.test(url.hostname);
-            if (isLocal || url.protocol !== 'https:') {
+            if (isLocal || !['http:', 'https:'].includes(url.protocol)) {
               console.error('BLOCKED_INSECURE_PROXY_REQUEST:', urlParam);
               return 'http://127.0.0.1/blocked'; 
             }

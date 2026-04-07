@@ -5,6 +5,8 @@
  * Strategically refactored to optimize performance and reduce App.jsx bloat.
  */
 
+import { getApiUrl } from '../utils/config';
+
 // Categorization keywords used to automatically tag incoming articles
 const CATEGORIES = {
   TECH: ['ai', 'google', 'apple', 'space', 'tesla', 'meta', 'nvidia', 'software', 'cloud'],
@@ -35,7 +37,7 @@ export const fetchRssContent = async (url) => {
     
     // Tier 1: Localized Vercel Serverless Proxy (Zero-CORS, Managed User-Agent)
     try {
-      const response = await fetch(`/api/rss-proxy?url=${encodeURIComponent(url)}`);
+      const response = await fetch(getApiUrl(`/api/rss-proxy?url=${encodeURIComponent(url)}`));
       if (response.ok) xmlText = await response.text();
     } catch (e) {
       console.warn(`Local proxy layer failed for [${url}]:`, e);
