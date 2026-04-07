@@ -35,23 +35,45 @@ export const fetchRssContent = async (url) => {
   try {
     let xmlText = '';
     
-    // Tier 1: Localized Vercel Serverless Proxy (Zero-CORS, Managed User-Agent)
+    // Tier 1: Localized Vercel Serverless Proxy
     try {
       const response = await fetch(getApiUrl(`/api/rss-proxy?url=${encodeURIComponent(url)}`));
-      if (response.ok) xmlText = await response.text();
+      if (response.ok) {
+         const text = await response.text();
+         // Ensure it's not an HTML error page from Vercel
+         if (text && text.trim().startsWith('<') && !text.toLowerCase().includes('<!doctype html>')) {
+             xmlText = text;
+         }
+      }
     } catch (e) {
       console.warn(`Local proxy layer failed for [${url}]:`, e);
     }
     
-    // Tier 2: proxy.cors.sh (High-reputation secondary fallback)
+    // Tier 2: RSS2JSON (Highly Reliable Direct Conversion)
     if (!xmlText) {
       try {
-        const response = await fetch(`https://proxy.cors.sh/${url}`, {
-           headers: { 'x-cors-gratis': 'true' }
-        });
-        if (response.ok) xmlText = await response.text();
+        const jsonResponse = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`);
+        if (jsonResponse.ok) {
+          const data = await jsonResponse.json();
+          if (data.status === 'ok') {
+            return data.items.map(item => {
+              const snippetText = (item.description || item.content || '').replace(/<[^>]*>?/gm, '').substring(0, 250);
+              return {
+                id: `${item.link}-${Math.random().toString(36).substr(2, 9)}`,
+                title: item.title || 'Untitled Dispatch',
+                link: item.link || '#',
+                pubDate: item.pubDate,
+                snippet: snippetText + (snippetText ? '...' : ''),
+                image: item.thumbnail || item.enclosure?.link || '',
+                category: categorizeArticle(`${item.title} ${item.description}`),
+                source: data.feed.title || 'Global News',
+                aiRefined: false,
+              };
+            });
+          }
+        }
       } catch (e) {
-        console.warn(`CORS.SH tier failed for [${url}]:`, e);
+        console.warn(`RSS2JSON tier failed for [${url}]:`, e);
       }
     }
 
@@ -60,11 +82,16 @@ export const fetchRssContent = async (url) => {
       const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
       if (response.ok) {
         const json = await response.json();
-        xmlText = json.contents;
+        if (json.contents && !json.contents.toLowerCase().includes('<!doctype html>')) {
+           xmlText = json.contents;
+        }
       }
     }
 
-    if (!xmlText) throw new Error(`CRITICAL_NETWORK_FAILURE: All proxy layers exhausted for [${url}]`);
+    if (!xmlText) {
+       console.warn(`CRITICAL_NETWORK_FAILURE: All proxy layers exhausted for [${url}]`);
+       return [];
+    }
 
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, "text/xml");
@@ -130,3 +157,4 @@ export const fetchRssContent = async (url) => {
     return [];
   }
 };
+
