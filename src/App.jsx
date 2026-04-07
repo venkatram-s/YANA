@@ -419,8 +419,16 @@ function App() {
 
   return (
     <>
-      <style>{customStyleBlock}</style>
-      {customCss && <style>{customCss}</style>}
+      {theme === 'custom' && (
+        <>
+          <style>{customStyleBlock}</style>
+          {customCss && (
+            <style>
+              {`[data-theme="custom"] { ${customCss} }`}
+            </style>
+          )}
+        </>
+      )}
 
 
 

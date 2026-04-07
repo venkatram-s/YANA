@@ -170,7 +170,26 @@ export const SettingsModal = ({
             </div>
           </div>
 
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {[
+              { name: 'Neon', p: '#f472b6', s: '#000000' },
+              { name: 'Forest', p: '#10b981', s: '#064e3b' },
+              { name: 'Royal', p: '#818cf8', s: '#1e1b4b' },
+              { name: 'Slate', p: '#38bdf8', s: '#0f172a' },
+              { name: 'Clear', p: '#6366f1', s: '#0d0d0d' },
+            ].map(p => (
+              <button 
+                key={p.name}
+                onClick={() => { onPrimaryColorChange(p.p); onSecondaryColorChange(p.s); }}
+                style={{ fontSize: '0.65rem', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--surface-hover)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 700, textTransform: 'uppercase' }}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+
           <div style={{ background: 'rgba(0,0,0,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+
               <h4 style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Advanced CSS (Manual Overlay)</h4>
               <textarea
                 className="search-input"
