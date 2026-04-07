@@ -32,7 +32,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiTone, setAiTone] = useState(() => localStorage.getItem('yana_ai_tone') || 'professional');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+  const [isAutoScrolling] = useState(false);
 
   // Initialize streak only once
   const [streak] = useState(() => {
@@ -50,7 +50,6 @@ function App() {
   });
 
   const [rssFeeds, setRssFeeds] = useState([]);
-  const [newRssUrl, setNewRssUrl] = useState('');
   const [groqKey, setGroqKey] = useState(localStorage.getItem('groq_api_key') || '');
   const [ttsActiveId, setTtsActiveId] = useState(null);
   const [focusedArticleId, setFocusedArticleId] = useState(null);
