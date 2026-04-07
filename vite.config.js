@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  base: './',
+  // Using an empty string for the base ensures absolute relative paths for Capacitor/Mobile
+  base: '',
   plugins: [
     react(),
     VitePWA({
@@ -58,17 +59,16 @@ export default defineConfig({
         rewrite: (path) => {
           const urlParam = new URLSearchParams(path.split('?').slice(1).join('?')).get('url');
           if (!urlParam) return '';
-          
           try {
             const url = new URL(urlParam);
-            // Block local/private access during dev
             const isLocal = /localhost|^127\.|^192\.168\.|^10\./.test(url.hostname);
             if (isLocal || !['http:', 'https:'].includes(url.protocol)) {
               console.error('BLOCKED_INSECURE_PROXY_REQUEST:', urlParam);
               return 'http://127.0.0.1/blocked'; 
             }
             return urlParam;
-          } catch {
+            // eslint-disable-next-line no-unused-vars
+          } catch (e) {
             return '';
           }
         },
@@ -91,8 +91,19 @@ export default defineConfig({
     }
   },
   build: {
+    // Reset target to ESNext for Vite 7 / esbuild stability with destructuring
     target: 'esnext',
     minify: 'terser',
-    sourcemap: false
+    sourcemap: false,
+    commonjsOptions: {
+      transformMixedEsModules: true
+    },
+    terserOptions: {
+      compress: {
+        // Prevent esbuild from performing dangerous optimizations on older WebViews
+        passes: 2,
+        drop_console: false
+      }
+    }
   }
 });

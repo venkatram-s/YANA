@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 import { DatabaseBroker } from './utils/databaseBroker';
 import { CryptoHarden } from './utils/cryptoHarden';
@@ -13,48 +13,17 @@ import { SettingsModal } from './components/SettingsModal';
 import { getApiUrl } from './utils/config';
 
 
-// Success sound path
-const SUCCESS_SOUND_URL = '/attached_assets/koiroylers-correct-356013.mp3';
-
-const dbBroker = new DatabaseBroker();
-const cryptoTool = new CryptoHarden();
-
-function calcStreak() {
-  const today = new Date().toDateString();
-  const last = localStorage.getItem('yana_last_visit');
-  const streak = parseInt(localStorage.getItem('yana_streak') || '0', 10);
-  if (last === today) return streak;
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const next = last === yesterday.toDateString() ? streak + 1 : 1;
-  localStorage.setItem('yana_streak', String(next));
-  localStorage.setItem('yana_last_visit', today);
-  return next;
-}
-
-function exportOPML(feeds) {
-  const items = feeds.map(url => `    <outline type="rss" text="${url}" xmlUrl="${url}" />`).join('\n');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<opml version="2.0">\n  <head><title>YANA Feed Export</title></head>\n  <body>\n    <outline text="Feeds" title="Feeds">\n${items}\n    </outline>\n  </body>\n</opml>`;
-  const blob = new Blob([xml], { type: 'text/xml' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'yana_feeds.opml';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function parseOPML(text) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(text, 'text/xml');
-  return Array.from(doc.querySelectorAll('outline[xmlUrl]')).map(o => o.getAttribute('xmlUrl')).filter(Boolean);
-}
+// Safe path for mobile
+const SUCCESS_SOUND_URL = './attached_assets/koiroylers-correct-356013.mp3';
 
 function App() {
+  // Move core utilities into useMemo to avoid global initialization TDZ issues
+  const dbBroker = useMemo(() => new DatabaseBroker(), []);
+  const cryptoTool = useMemo(() => new CryptoHarden(), []);
+
   const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'pitch-black');
-  const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('yana_primary_color') || '#6366f1');
-  const [secondaryColor, setSecondaryColor] = useState(() => localStorage.getItem('yana_secondary_color') || '#0d0d0d');
-
-
+  const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('yana_primary_color') || '#60a5fa');
+  const [secondaryColor, setSecondaryColor] = useState(() => localStorage.getItem('yana_secondary_color') || '#000000');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedMode, setFeedMode] = useState('doomscroll');
@@ -62,12 +31,24 @@ function App() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiTone, setAiTone] = useState(() => localStorage.getItem('yana_ai_tone') || 'professional');
-
-
-
   const [searchQuery, setSearchQuery] = useState('');
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
-  const [streak] = useState(calcStreak);
+
+  // Initialize streak only once
+  const [streak] = useState(() => {
+    const today = new Date().toDateString();
+    const last = localStorage.getItem('yana_last_visit');
+    const streakVal = parseInt(localStorage.getItem('yana_streak') || '0', 10);
+    if (last === today) return streakVal;
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const next = last === yesterday.toDateString() ? streakVal + 1 : 1;
+    localStorage.setItem('yana_streak', String(next));
+    localStorage.setItem('yana_last_visit', today);
+    return next;
+  });
+
   const [rssFeeds, setRssFeeds] = useState([]);
   const [newRssUrl, setNewRssUrl] = useState('');
   const [groqKey, setGroqKey] = useState(localStorage.getItem('groq_api_key') || '');
@@ -78,194 +59,93 @@ function App() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [notes, setNotes] = useState([]);
   const [customCss, setCustomCss] = useState(() => localStorage.getItem('yana_custom_css') || '');
-
-
   const [doomscrollIntervalMs, setDoomscrollIntervalMs] = useState(() => {
     const v = localStorage.getItem('yana_doomscroll_interval_ms');
     const parsed = v ? parseInt(v, 10) : 5000;
-    return Number.isFinite(parsed) ? parsed : 5000;
+    return isNaN(parsed) ? 5000 : parsed;
   });
 
-  const onDoomscrollIntervalChange = (seconds) => {
-    const s = Number(seconds);
-    const clamped = Number.isFinite(s) ? Math.max(1, Math.min(600, s)) : 5;
-    const ms = clamped * 1000;
-    setDoomscrollIntervalMs(ms);
-    localStorage.setItem('yana_doomscroll_interval_ms', String(ms));
-  };
-
-  const scrollIntervalRef = useRef(null);
-  const observerRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const isHoveringRef = useRef(false);
+  const [xrayActiveId, setXrayActiveId] = useState(null);
+  const pressTimerRef = useRef(null);
   const feedContainerRef = useRef(null);
-  const searchInputRef = useRef(null);
+  const searchRef = useRef(null);
   const filteredRef = useRef([]);
 
-  const handleFocusSearch = () => {
-    searchInputRef.current?.focus();
-    // On mobile, the header might be hidden or search not visible, but we focus it anyway.
-    // In our CSS we made search container hidden on mobile, so we should toggle a state
-    // but for now let's just make it focusable or scroll to top.
-    feedContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
+  // Load custom CSS
   useEffect(() => {
-    localStorage.setItem('groq_api_key', groqKey);
-  }, [groqKey]);
+    let style = document.getElementById('yana-custom-runtime-css');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'yana-custom-runtime-css';
+      document.head.appendChild(style);
+    }
+    style.innerHTML = customCss;
+  }, [customCss]);
 
+  // Load themes
   useEffect(() => {
+    document.documentElement.className = `theme-${theme}`;
+    document.documentElement.style.setProperty('--accent-color', primaryColor);
+    document.documentElement.style.setProperty('--bg-color', secondaryColor);
+    localStorage.setItem('yana_theme', theme);
     localStorage.setItem('yana_primary_color', primaryColor);
     localStorage.setItem('yana_secondary_color', secondaryColor);
-    localStorage.setItem('yana_ai_tone', aiTone);
-  }, [primaryColor, secondaryColor, aiTone]);
+  }, [theme, primaryColor, secondaryColor]);
 
-
-
-
-  // --- AUTO-SCROLL: Smooth interval-based scrolling ---
+  // Load Feeds and Settings from DB
   useEffect(() => {
-    if (!isAutoScrolling) {
-      clearInterval(scrollIntervalRef.current);
-      return;
-    }
-    
-    scrollIntervalRef.current = setInterval(() => {
-      const c = feedContainerRef.current;
-      if (!c || isHoveringRef.current) return;
-      
-      const currentScroll = c.scrollTop;
-      const maxScroll = c.scrollHeight - c.clientHeight;
-      
-      if (currentScroll >= maxScroll - 10) {
-        setIsAutoScrolling(false);
-        return;
+    const initDB = async () => {
+      try {
+        const feeds = await dbBroker.getItem('rssFeeds');
+        if (feeds) setRssFeeds(feeds);
+        else {
+          const defaults = [
+            { id: '1', url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge' },
+            { id: '2', url: 'https://news.ycombinator.com/rss', name: 'Hacker News' },
+            { id: '3', url: 'https://techcrunch.com/feed/', name: 'TechCrunch' }
+          ];
+          setRssFeeds(defaults);
+          await dbBroker.setItem('rssFeeds', defaults);
+        }
+        const cachedNotes = await dbBroker.getItem('encryptedNotes');
+        if (cachedNotes) setNotes(cachedNotes);
+      } catch (err) {
+        console.error('YANA DB INIT FAILED:', err);
       }
-      
-      // Smooth scroll to next article
-      c.scrollTo({
-        top: currentScroll + c.clientHeight,
-        behavior: 'smooth'
-      });
-    }, doomscrollIntervalMs);
-    
-    return () => clearInterval(scrollIntervalRef.current);
-  }, [isAutoScrolling, doomscrollIntervalMs]);
-
-  // Auto-start doomscroll only if user wants it (persisted)
-  useEffect(() => {
-    if (feedMode === 'doomscroll' && articles.length > 0) {
-      // We don't auto-force setIsAutoScrolling(true) here anymore, 
-      // instead we rely on the current state which is toggled by the button.
-    } else {
-      setIsAutoScrolling(false);
-      feedContainerRef.current?.scrollTo({ top: 0 });
-    }
-  }, [feedMode, articles.length]);
-
-  const toggleAutoScroll = () => {
-    setIsAutoScrolling(prev => !prev);
-  };
-
-  useEffect(() => {
-    const boot = async () => {
-      const storedFeeds = await dbBroker.getItem('rssFeeds');
-      if (storedFeeds) setRssFeeds(storedFeeds);
-      const hasVault = await dbBroker.getItem('encryptedNotes');
-      if (!hasVault) setVaultLocked(false);
-      const cached = await dbBroker.getItem('cachedArticles');
-      if (cached?.length) {
-        setArticles(cached);
-        setLoading(false);
-      }
-      
-      // Theme logic handled in a separate useEffect below
-      
-      // Load notes
-      const storedNotes = await dbBroker.getItem('markdownNotes');
-      if (storedNotes?.length) setNotes(storedNotes);
     };
-    boot();
+    initDB();
+  }, [dbBroker]);
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SR) {
-      const r = new SR();
-      r.continuous = false;
-      r.interimResults = false;
-      r.lang = 'en-US';
-      r.onresult = (e) => { setNotes(p => [...p, { id: Date.now().toString(), title: 'Voice Transcript', date: new Date().toISOString(), content: e.results[0][0].transcript, sourceUrl: '' }]); };
-      r.onerror = () => {};
-      r.onend = () => {};
-      recognitionRef.current = r;
-    }
+  const triggerGlitch = useCallback(() => {
+    setIsGlitching(true);
+    setTimeout(() => setIsGlitching(false), 300);
   }, []);
 
-  // Adaptive Theme Logic
+  const refreshFeeds = useCallback(async () => {
+    if (rssFeeds.length === 0) return;
+    setLoading(true);
+    triggerGlitch();
+    try {
+      const all = await Promise.all(
+        rssFeeds.map(f => fetchRssContent(f.url, f.name).catch(() => []))
+      );
+      const agg = all.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+      setArticles(agg);
+      if (agg.length > 0) triggerGlitch();
+    } catch (err) {
+      console.error('Refresh Failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [rssFeeds, triggerGlitch]);
+
   useEffect(() => {
-    const applyTheme = (t) => {
-      document.documentElement.setAttribute('data-theme', t);
-    };
-
-    applyTheme(theme);
-    localStorage.setItem('yana_theme', theme);
-  }, [theme]);
-
-
-  useEffect(() => {
-    const sync = async () => {
-      await dbBroker.setItem('rssFeeds', rssFeeds);
+    if (rssFeeds.length > 0 && articles.length === 0) {
       refreshFeeds();
-    };
-    sync();
-  }, [rssFeeds, refreshFeeds]);
+    }
+  }, [rssFeeds.length, articles.length, refreshFeeds]);
 
-  // Persist notes to IndexedDB
-  useEffect(() => {
-    if (notes.length > 0) dbBroker.setItem('markdownNotes', notes);
-  }, [notes]);
-
-  useEffect(() => {
-    const container = feedContainerRef.current;
-    if (!container || feedMode !== 'doomscroll') return;
-    observerRef.current?.disconnect();
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (feedMode !== 'doomscroll') return;
-      let best = null;
-      let bestRatio = 0;
-      entries.forEach(e => {
-        if (e.intersectionRatio > bestRatio) {
-          bestRatio = e.intersectionRatio;
-          best = e.target;
-        }
-      });
-      if (best && bestRatio > 0.7) setFocusedArticleId(best.getAttribute('data-id'));
-    }, { root: container, threshold: [0.3, 0.5, 0.7, 1] });
-    container.querySelectorAll('.article-card').forEach(el => observerRef.current.observe(el));
-    return () => observerRef.current?.disconnect();
-  }, [articles, feedMode]);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      if (e.key === 'Escape') {
-        if (settingsOpen) { setSettingsOpen(false); return; }
-        if (notesOpen) { setNotesOpen(false); return; }
-        return;
-      }
-
-      const k = e.key.toLowerCase();
-      if (k === 'j') { e.preventDefault(); navigateArticle(1); }
-      if (k === 'k') { e.preventDefault(); navigateArticle(-1); }
-      if (k === 's') setNotesOpen(true);
-      if (k === 'r') {
-        if (focusedArticleId) handleRefineWithAI(focusedArticleId);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [settingsOpen, notesOpen, focusedArticleId, navigateArticle, handleRefineWithAI]);
-
+  // Key Bindings
   const navigateArticle = useCallback((dir) => {
     const list = filteredRef.current;
     if (!list.length) return;
@@ -278,53 +158,16 @@ function App() {
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [focusedArticleId]);
 
-  const triggerGlitch = useCallback(() => {
-    setIsGlitching(true);
-    setTimeout(() => setIsGlitching(false), 120);
-  }, []);
-
-  const refreshFeeds = useCallback(async () => {
-    if (articles.length === 0) setLoading(true);
-    const batches = await Promise.all(rssFeeds.map(url => fetchRssContent(url)));
-    const agg = batches.flat();
-    agg.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-    setArticles(agg);
-    dbBroker.setItem('cachedArticles', agg);
-    setLoading(false);
-    if (agg.length > 0) triggerGlitch();
-  }, [articles.length, rssFeeds, triggerGlitch]);
-
-  const handleUnlockVault = useCallback(async () => {
-    try {
-      const enc = await dbBroker.getItem('encryptedNotes');
-      if (!enc) { setVaultLocked(false); return; }
-      await cryptoTool.decryptData(enc, cryptoPassword);
-      setVaultLocked(false);
-      setFailedAttempts(0);
-    } catch {
-      const f = failedAttempts + 1;
-      setFailedAttempts(f);
-      if (f >= 3) {
-        await dbBroker.purgeDatabase();
-        localStorage.clear();
-        alert('FATAL: Vault wiped after 3 failed attempts.');
-        window.location.reload();
-      } else {
-        alert(`Wrong password. ${3 - f} attempt(s) remaining.`);
-      }
-    }
-  }, [cryptoPassword, failedAttempts]);
-
   const handleRefineWithAI = useCallback(async (articleId) => {
     if (!groqKey) { alert('Add a Groq API key in Settings first.'); setSettingsOpen(true); return; }
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
     try {
       const art = articles.find(a => a.id === articleId);
-      const searchQuery = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
+      const searchQueryParam = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
       
-      const searchRes = await fetch(getApiUrl(`/api/web-search?q=${searchQuery}`));
+      const searchRes = await fetch(getApiUrl(`/api/web-search?q=${searchQueryParam}`));
+      if (!searchRes.ok) throw new Error('Search API inaccessible');
       const searchData = await searchRes.json();
-      if (searchData.error) throw new Error(searchData.error);
       const results = searchData.results || [];
       const contextText = results.length > 0 
         ? results.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
@@ -346,14 +189,52 @@ function App() {
       const [refined, tagStr] = content.split('| Tags: ');
       const newTags = tagStr ? tagStr.split(',').map(t => t.trim()) : [];
       setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, tags: newTags, aiRefined: true, loading: false } : a));
-      const audio = new Audio(SUCCESS_SOUND_URL);
-      audio.play().catch(() => {});
+      new Audio(SUCCESS_SOUND_URL).play().catch(() => {});
     } catch (err) {
       console.error('AI refinement failed:', err);
       setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: false } : a));
-      alert('AI request failed. Check console for details.');
     }
   }, [aiTone, articles, groqKey]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+      if (e.key === 'Escape') {
+        if (settingsOpen) { setSettingsOpen(false); return; }
+        if (notesOpen) { setNotesOpen(false); return; }
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === 'j') { e.preventDefault(); navigateArticle(1); }
+      if (k === 'k') { e.preventDefault(); navigateArticle(-1); }
+      if (k === 's') setNotesOpen(true);
+      if (k === 'r' && focusedArticleId) handleRefineWithAI(focusedArticleId);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [settingsOpen, notesOpen, focusedArticleId, navigateArticle, handleRefineWithAI]);
+
+  const handleUnlockVault = useCallback(async () => {
+    try {
+      const enc = await dbBroker.getItem('encryptedNotes');
+      if (!enc) { setVaultLocked(false); return; }
+      await cryptoTool.decryptData(enc, cryptoPassword);
+      setVaultLocked(false);
+      setFailedAttempts(0);
+    } catch {
+      const f = failedAttempts + 1;
+      setFailedAttempts(f);
+      if (f >= 3) {
+        await dbBroker.purgeDatabase();
+        localStorage.clear();
+        alert('FATAL: Vault wiped after 3 failed attempts.');
+        window.location.reload();
+      } else {
+        alert(`Wrong password. ${3 - f} attempt(s) remaining.`);
+      }
+    }
+  }, [cryptoPassword, failedAttempts, dbBroker, cryptoTool]);
 
   const handleToggleTTS = useCallback((article) => {
     if (!('speechSynthesis' in window)) return;
@@ -365,182 +246,142 @@ function App() {
     setTtsActiveId(article.id);
   }, [ttsActiveId]);
 
-  const handleImportOPML = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const urls = parseOPML(e.target.result);
-      if (!urls.length) { alert('No feeds found in OPML file.'); return; }
-      setRssFeeds(prev => [...new Set([...prev, ...urls])]);
-    };
-    reader.readAsText(file);
-  };
-
-  const handleSaveToNotes = (article) => {
-    const mdContent = `# ${article.title}\n\n> **Source:** ${article.source || 'Feed'}  \n> **Date:** ${new Date(article.pubDate).toLocaleDateString()}  \n> **Link:** ${article.link || ''}\n\n---\n\n${article.snippet}\n`;
+  const handleSaveToNotes = useCallback(async (article) => {
+    if (vaultLocked) { setNotesOpen(true); alert('Unlock vault to save.'); return; }
     const newNote = {
       id: Date.now().toString(),
-      title: article.title,
+      title: `Ref: ${article.title}`,
       date: new Date().toISOString(),
-      content: mdContent,
-      sourceUrl: article.link || '',
+      content: `### ${article.title}\nSource: ${article.source}\nDate: ${article.pubDate}\n\n${article.snippet}\n\n[Original Dispatch](${article.link})`
     };
-    setNotes(prev => [...prev, newNote]);
-    setNotesOpen(true);
-  };
+    const updated = [...notes, newNote];
+    setNotes(updated);
+    const encrypted = await cryptoTool.encryptData(JSON.stringify(updated), cryptoPassword);
+    await dbBroker.setItem('encryptedNotes', encrypted);
+    alert('Note extraction successful.');
+  }, [vaultLocked, notes, cryptoPassword, cryptoTool, dbBroker]);
 
-  const handleHardReset = () => {
-    if (confirm('Reset all data? This cannot be undone.')) {
-      dbBroker.purgeDatabase();
-      localStorage.clear();
-      window.location.reload();
+  const handleUpdateNotes = useCallback(async (updated) => {
+    setNotes(updated);
+    if (!vaultLocked) {
+      const encrypted = await cryptoTool.encryptData(JSON.stringify(updated), cryptoPassword);
+      await dbBroker.setItem('encryptedNotes', encrypted);
     }
-  };
+  }, [vaultLocked, cryptoPassword, cryptoTool, dbBroker]);
 
-  const filtered = articles.filter(a =>
-    a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.snippet.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  filteredRef.current = filtered;
+  const filtered = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    const result = articles.filter(a => 
+      a.title.toLowerCase().includes(query) || 
+      a.snippet.toLowerCase().includes(query) ||
+      (a.tags && a.tags.some(t => t.toLowerCase().includes(query)))
+    );
+    filteredRef.current = result;
+    return result;
+  }, [articles, searchQuery]);
 
-  const isDoomscroll = feedMode === 'doomscroll';
-
-  const customStyleBlock = `
-    [data-theme="custom"] {
-      --bg-color: ${secondaryColor};
-      --surface-color: ${secondaryColor === '#000000' ? '#0d0d0d' : secondaryColor};
-      --surface-hover: ${secondaryColor === '#000000' ? '#171717' : secondaryColor};
-      --text-primary: #ffffff;
-      --text-secondary: #a3a3a3;
-      --text-muted: #6b7280;
-      --accent-color: ${primaryColor};
-      --accent-hover: ${primaryColor};
-      --accent-glow: ${primaryColor}44;
-      --logo-color: ${primaryColor};
-      --border-color: rgba(255,255,255,0.1);
-      --header-bg: ${secondaryColor}cc;
-    }
-  `;
+  // Doomscroll Auto-refresh
+  useEffect(() => {
+    if (feedMode !== 'doomscroll' || !isAutoScrolling) return;
+    const t = setInterval(() => {
+       const container = feedContainerRef.current;
+       if (container) {
+         container.scrollBy({ top: window.innerHeight * 0.9, behavior: 'smooth' });
+       }
+    }, doomscrollIntervalMs);
+    return () => clearInterval(t);
+  }, [feedMode, isAutoScrolling, doomscrollIntervalMs]);
 
   return (
-    <>
-      {theme === 'custom' && (
-        <>
-          <style>{customStyleBlock}</style>
-          {customCss && <style>{customCss}</style>}
-        </>
-      )}
-
-
-
-      <Header
-
-        theme={theme}
+    <div className={`yana-container ${isGlitching ? 'glitch-active' : ''}`}>
+      <Header 
+        theme={theme} 
         feedMode={feedMode}
-        isLocked={vaultLocked}
-        searchQuery={searchQuery}
-        streak={streak}
-        onSearchChange={setSearchQuery}
+        onSetTheme={setTheme}
         onSetFeedMode={setFeedMode}
-        onToggleTheme={() => {
-          const themes = ['light', 'pitch-black', 'custom'];
-          const idx = themes.indexOf(theme);
-          const nt = themes[(idx + 1) % themes.length];
-          setTheme(nt);
-        }}
-
-
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenNotes={() => setNotesOpen(true)}
-        searchRef={searchInputRef}
+        searchQuery={searchQuery}
+        onSearch={setSearchQuery}
+        searchRef={searchRef}
+        streak={streak}
       />
 
-      <main
-        ref={feedContainerRef}
-        className={`feed-container ${isDoomscroll ? 'doomscroll-mode' : 'news-mode'} ${isGlitching ? 'glitching' : ''}`}
-      >
-        {loading && articles.length === 0 ? [1, 2, 3, 4, 5].map(i => <SkeletonLoader key={i} />) : articles.length === 0 ? (
+      <main className={`feed-container mode-${feedMode}`} ref={feedContainerRef}>
+        {loading ? (
+          <div className="skeleton-grid">
+            {[1, 2, 3, 4, 5, 6].map(i => <SkeletonLoader key={i} />)}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <h2 style={{ color: 'var(--accent-color)', marginBottom: '15px' }}>ZERO_INTELLIGENCE_SOURCES</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '30px' }}>Add RSS feeds in Settings to begin.</p>
-            <button className="btn-primary" onClick={() => setSettingsOpen(true)}>INITIALIZE SOURCES</button>
+            <h2>No Dispatches Found</h2>
+            <p>Check your subscription feeds or refine your search filters.</p>
+            <button className="btn-primary" onClick={refreshFeeds}>Reconnect Feeds</button>
           </div>
         ) : (
-          filtered.map(ia => (
+          filtered.map(article => (
             <IntelligentArticleCard
-              key={ia.id}
-              article={ia}
-              isDoomscroll={isDoomscroll}
-              isFocused={focusedArticleId === ia.id}
+              key={article.id}
+              article={article}
+              isFocused={focusedArticleId === article.id}
+              isDoomscroll={feedMode === 'doomscroll'}
               ttsActiveId={ttsActiveId}
-              onHover={(id) => { isHoveringRef.current = true; setFocusedArticleId(id); }}
-              onLeave={() => { isHoveringRef.current = false; }}
+              xrayActiveId={xrayActiveId}
+              onHover={setFocusedArticleId}
+              onLeave={() => {}}
+              onPointerDown={() => {
+                pressTimerRef.current = setTimeout(() => setXrayActiveId(article.id), 800);
+              }}
+              onPointerUp={() => {
+                clearTimeout(pressTimerRef.current);
+                setXrayActiveId(null);
+              }}
               onToggleTTS={handleToggleTTS}
               onRefineWithAI={handleRefineWithAI}
-              onSaveToNotes={() => handleSaveToNotes(ia)}
+              onSaveToNotes={() => handleSaveToNotes(article)}
             />
           ))
         )}
       </main>
 
-      {isDoomscroll && articles.length > 0 && (
-        <button 
-          className="floating-auto-scroll" 
-          onClick={toggleAutoScroll}
-          title={isAutoScrolling ? "Pause Autoscroll" : "Resume Autoscroll"}
-        >
-          <div className={`scroll-indicator ${isAutoScrolling ? 'active' : ''}`} />
-          <span>{isAutoScrolling ? 'PAUSE' : 'RESUME'}</span>
-        </button>
-      )}
+      <BottomNav 
+        feedMode={feedMode} 
+        onSetFeedMode={setFeedMode} 
+        onOpenVault={() => setNotesOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
-      <NotesVault
+      <NotesVault 
         isOpen={notesOpen}
         isLocked={vaultLocked}
         notes={notes}
-        failedAttempts={failedAttempts}
         cryptoPassword={cryptoPassword}
         onPasswordChange={setCryptoPassword}
         onUnlock={handleUnlockVault}
-        onNotesChange={setNotes}
         onClose={() => setNotesOpen(false)}
+        onNotesChange={handleUpdateNotes}
       />
 
-      <SettingsModal
+      <SettingsModal 
         isOpen={settingsOpen}
         rssFeeds={rssFeeds}
-        newRssUrl={newRssUrl}
-        groqKey={groqKey}
-        doomscrollIntervalMs={doomscrollIntervalMs}
-        onDoomscrollIntervalChange={onDoomscrollIntervalChange}
-        onClose={() => setSettingsOpen(false)}
-        onUrlChange={setNewRssUrl}
-        onAddFeed={() => { if (newRssUrl && !rssFeeds.includes(newRssUrl)) { setRssFeeds(p => [...p, newRssUrl]); setNewRssUrl(''); } }}
-        onRemoveFeed={(u) => setRssFeeds(p => p.filter(f => f !== u))}
-        onGroqKeyChange={setGroqKey}
-        customCss={customCss}
-        onCustomCssChange={setCustomCss}
+        onSetRssFeeds={async (newFeeds) => {
+          setRssFeeds(newFeeds);
+          await dbBroker.setItem('rssFeeds', newFeeds);
+        }}
         primaryColor={primaryColor}
+        onSetPrimaryColor={setPrimaryColor}
         secondaryColor={secondaryColor}
-        onPrimaryColorChange={setPrimaryColor}
-        onSecondaryColorChange={setSecondaryColor}
+        onSetSecondaryColor={setSecondaryColor}
         aiTone={aiTone}
-        onAiToneChange={setAiTone}
-        onExportOPML={() => exportOPML(rssFeeds)}
-        onImportOPML={handleImportOPML}
-        onHardReset={handleHardReset}
+        onSetAiTone={setAiTone}
+        groqKey={groqKey}
+        onSetGroqKey={setGroqKey}
+        onClose={() => setSettingsOpen(false)}
+        customCss={customCss}
+        onSetCustomCss={setCustomCss}
+        doomscrollIntervalMs={doomscrollIntervalMs}
+        onSetDoomscrollIntervalMs={setDoomscrollIntervalMs}
       />
-
-      <BottomNav 
-        feedMode={feedMode}
-        onSetFeedMode={setFeedMode}
-        onOpenNotes={() => setNotesOpen(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
-        isLocked={vaultLocked}
-        onFocusSearch={handleFocusSearch}
-      />
-
-
-    </>
+    </div>
   );
 }
 
