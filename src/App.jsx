@@ -59,6 +59,8 @@ function App() {
   const [isGlitching, setIsGlitching] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aiTone, setAiTone] = useState(() => localStorage.getItem('yana_ai_tone') || 'professional');
+
 
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,7 +109,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem('yana_primary_color', primaryColor);
     localStorage.setItem('yana_secondary_color', secondaryColor);
-  }, [primaryColor, secondaryColor]);
+    localStorage.setItem('yana_ai_tone', aiTone);
+  }, [primaryColor, secondaryColor, aiTone]);
+
 
 
 
@@ -332,8 +336,9 @@ function App() {
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'user',
-            content: `Article: ${art.title}\nLink: ${art.link}\n\nLive web search results:\n${contextText}\n\nBased on the article and live search results above, provide: 2-4 key information bullets with source URLs, a 1-2 sentence conclusion, and 2-3 follow-up questions. Cite sources by number [1], [2], etc. Plain text only.`
+            content: `Article: ${art.title}\nLink: ${art.link}\n\nLive web search results:\n${contextText}\n\nBased on the above, provide a strict 1-sentence summary of the news. Use a ${aiTone} tone. Then, list 3-5 relevant entities Mentioned. Plain text only.`
           }]
+
         }),
       });
       
@@ -433,7 +438,25 @@ function App() {
 
 
 
+      {xrayActiveId && (
+        <div className="x-ray-overlay" onPointerUp={() => setXrayActiveId(null)}>
+           <div style={{ position: 'absolute', top: '80px', display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center', padding: '0 40px' }}>
+              {['Apple Vision Pro', 'Tim Cook', 'Nvidia H100', 'OpenAI Sora'].map(tag => (
+                <div key={tag} style={{ padding: '10px 24px', borderRadius: '50px', border: '1px solid var(--accent-color)', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 700, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)' }}>
+                  {tag}
+                </div>
+              ))}
+           </div>
+           
+           <button className="floating-auto-scroll" style={{ bottom: '120px' }}>
+              <div className="scroll-indicator active" />
+              <span>RESUME</span>
+           </button>
+        </div>
+      )}
+
       <Header
+
         theme={theme}
         feedMode={feedMode}
         isLocked={vaultLocked}
@@ -525,10 +548,13 @@ function App() {
         secondaryColor={secondaryColor}
         onPrimaryColorChange={setPrimaryColor}
         onSecondaryColorChange={setSecondaryColor}
+        aiTone={aiTone}
+        onAiToneChange={setAiTone}
         onExportOPML={() => exportOPML(rssFeeds)}
         onImportOPML={handleImportOPML}
         onHardReset={handleHardReset}
       />
+
 
     </>
   );

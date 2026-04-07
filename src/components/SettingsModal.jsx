@@ -213,7 +213,38 @@ export const SettingsModal = ({
           </div>
         </section>
 
+        {/* AI Synthesis Character */}
+        <section style={{ marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
+          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+            AI Synthesis Character
+          </h3>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {['professional', 'sarcastic', 'quippy', 'positive'].map(tone => (
+              <button
+                key={tone}
+                onClick={() => onAiToneChange(tone)}
+                style={{ 
+                  fontSize: '0.7rem', 
+                  padding: '8px 16px', 
+                  borderRadius: '10px', 
+                  border: '1px solid', 
+                  borderColor: aiTone === tone ? 'var(--accent-color)' : 'var(--border-color)',
+                  background: aiTone === tone ? 'var(--accent-color)' : 'var(--surface-hover)', 
+                  color: aiTone === tone ? '#000' : 'var(--text-primary)', 
+                  cursor: 'pointer', 
+                  fontWeight: 700, 
+                  textTransform: 'uppercase',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {tone}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* Display Options */}
+
         <section style={{ marginBottom: '28px' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
             Display
