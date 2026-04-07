@@ -71,7 +71,6 @@ function App() {
   const [groqKey, setGroqKey] = useState(localStorage.getItem('groq_api_key') || '');
   const [ttsActiveId, setTtsActiveId] = useState(null);
   const [focusedArticleId, setFocusedArticleId] = useState(null);
-  const [xrayActiveId, setXrayActiveId] = useState(null);
   const [isDictating, setIsDictating] = useState(false);
   const [cryptoPassword, setCryptoPassword] = useState('');
   const [vaultLocked, setVaultLocked] = useState(true);
@@ -336,15 +335,17 @@ function App() {
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'user',
-            content: `Article: ${art.title}\nLink: ${art.link}\n\nLive web search results:\n${contextText}\n\nBased on the above, provide a strict 1-sentence summary of the news. Use a ${aiTone} tone. Then, list 3-5 relevant entities Mentioned. Plain text only.`
+            content: `Article: ${art.title}\nLink: ${art.link}\n\nLive web search results:\n${contextText}\n\nBased on the above, provide a strict 1-sentence summary of the news in the tone "${aiTone}". Following the summary, provide a comma-separated list of 3-5 relevant entities Mentioned (tags). Plain text only. Formatting: [Summary] | Tags: [Tag1, Tag2]`
           }]
-
         }),
       });
       
       const data = await res.json();
-      const refined = data.choices[0].message.content;
-      setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, aiRefined: true, loading: false } : a));
+      const content = data.choices[0].message.content;
+      const [refined, tagStr] = content.split('| Tags: ');
+      const newTags = tagStr ? tagStr.split(',').map(t => t.trim()) : [];
+      
+      setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, tags: newTags, aiRefined: true, loading: false } : a));
       
       // Play success sound
       const audio = new Audio(SUCCESS_SOUND_URL);
@@ -433,24 +434,6 @@ function App() {
 
 
 
-
-      {xrayActiveId && (
-        <div className="x-ray-overlay" onPointerUp={() => setXrayActiveId(null)}>
-           <div style={{ position: 'absolute', top: '80px', display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center', padding: '0 40px' }}>
-              {['Apple Vision Pro', 'Tim Cook', 'Nvidia H100', 'OpenAI Sora'].map(tag => (
-                <div key={tag} style={{ padding: '10px 24px', borderRadius: '50px', border: '1px solid var(--accent-color)', color: 'var(--accent-color)', fontSize: '0.85rem', fontWeight: 700, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)' }}>
-                  {tag}
-                </div>
-              ))}
-           </div>
-           
-           <button className="floating-auto-scroll" style={{ bottom: '120px' }}>
-              <div className="scroll-indicator active" />
-              <span>RESUME</span>
-           </button>
-        </div>
-      )}
-
       <Header
 
         theme={theme}
@@ -490,11 +473,8 @@ function App() {
               isDoomscroll={isDoomscroll}
               isFocused={focusedArticleId === ia.id}
               ttsActiveId={ttsActiveId}
-              xrayActiveId={xrayActiveId}
               onHover={(id) => { isHoveringRef.current = true; setFocusedArticleId(id); }}
               onLeave={() => { isHoveringRef.current = false; }}
-              onPointerDown={(a) => { pressTimerRef.current = setTimeout(() => setXrayActiveId(a.id), 600); }}
-              onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
               onToggleTTS={handleToggleTTS}
               onRefineWithAI={handleRefineWithAI}
               onSaveToNotes={() => handleSaveToNotes(ia)}
