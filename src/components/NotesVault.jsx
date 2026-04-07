@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, AlertTriangle, X, Download, PenSquare, Plus, Trash } from 'lucide-react';
+import { Lock, AlertTriangle, X, Download, PenSquare, Plus, Trash, Eye, Edit3 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 export const NotesVault = ({
   isOpen,
@@ -14,6 +15,7 @@ export const NotesVault = ({
   onNotesChange,
 }) => {
   const [selectedNoteId, setSelectedNoteId] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   if (!isOpen) return null;
 
@@ -48,10 +50,15 @@ export const NotesVault = ({
   return (
     <div className={`notes-panel open`} style={{ display: 'flex', flexDirection: 'row' }}>
       {/* Sidebar: Note List */}
-      <div style={{ width: '200px', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: '220px', borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', background: 'var(--bg-color)' }}>
         <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>Notes</h3>
-          <button className="btn-icon" onClick={() => onNotesChange([...notes, { id: Date.now().toString(), title: 'New Note', date: new Date().toISOString(), content: '' }])}>
+          <h3 style={{ fontSize: '1rem' }}>Notes</h3>
+          <button className="btn-icon" onClick={() => {
+            const newId = Date.now().toString();
+            onNotesChange([...notes, { id: newId, title: 'New Note', date: new Date().toISOString(), content: '' }]);
+            setSelectedNoteId(newId);
+            setIsEditing(true);
+          }}>
             <Plus size={16} />
           </button>
         </div>
@@ -60,37 +67,61 @@ export const NotesVault = ({
             <div 
               key={note.id} 
               onClick={() => setSelectedNoteId(note.id)}
-              style={{ padding: '12px', cursor: 'pointer', background: selectedNoteId === note.id ? 'var(--surface-hover)' : 'transparent', borderBottom: '1px solid var(--border-color)' }}
+              style={{ padding: '12px 16px', cursor: 'pointer', background: selectedNoteId === note.id ? 'var(--surface-hover)' : 'transparent', borderBottom: '1px solid var(--border-color)' }}
             >
-              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{note.title}</div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{new Date(note.date).toLocaleDateString()}</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{note.title || 'Untitled'}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>{new Date(note.date).toLocaleDateString()}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* Editor Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--surface-color)' }}>
         <div className="notes-header">
-          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Lock size={16} color="#10b981"/> {selectedNote ? selectedNote.title : 'Select a Note'}
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem' }}>
+            <Lock size={14} color="#10b981"/> {selectedNote ? selectedNote.title : 'Select a Note'}
           </h2>
-          <div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {selectedNote && (
+              <button 
+                className="btn-icon" 
+                onClick={() => setIsEditing(!isEditing)} 
+                title={isEditing ? "View Markdown" : "Edit Note"}
+              >
+                {isEditing ? <Eye size={18} /> : <Edit3 size={18} />}
+              </button>
+            )}
             <button className="btn-icon" onClick={() => { if(selectedNote) onNotesChange(notes.filter(n => n.id !== selectedNote.id)); setSelectedNoteId(null); }}>
-              <Trash size={20} color="#ef4444" />
+              <Trash size={18} color="#ef4444" />
             </button>
             <button className="btn-icon" onClick={onClose}>
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
         </div>
-        {selectedNote && (
-          <textarea 
-            className="notes-textarea"
-            value={selectedNote.content}
-            onChange={(e) => onNotesChange(notes.map(n => n.id === selectedNote.id ? {...n, content: e.target.value} : n))}
-          />
-        )}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+          {selectedNote ? (
+            isEditing ? (
+              <textarea 
+                className="notes-textarea"
+                style={{ width: '100%', height: '100%', border: 'none', background: 'transparent', color: 'var(--text-primary)', outline: 'none', resize: 'none' }}
+                value={selectedNote.content}
+                onChange={(e) => onNotesChange(notes.map(n => n.id === selectedNote.id ? {...n, content: e.target.value} : n))}
+                placeholder="Type your notes here (Markdown supported)..."
+                autoFocus
+              />
+            ) : (
+              <div className="markdown-body">
+                <ReactMarkdown>{selectedNote.content || '_No content extractions found._'}</ReactMarkdown>
+              </div>
+            )
+          ) : (
+            <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              Select a note or create a new one.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

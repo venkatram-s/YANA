@@ -82,6 +82,11 @@ export const fetchRssContent = async (url) => {
         const encoded = node.getElementsByTagNameNS('*', 'encoded')[0];
         if (encoded) description = encoded.textContent || '';
       }
+      // Special handler for YouTube media:description
+      const mediaDesc = node.getElementsByTagNameNS('*', 'description')[0]?.textContent;
+      if (mediaDesc && (!description || mediaDesc.length > description.length)) {
+        description = mediaDesc;
+      }
 
       // Media extraction heuristics
       let image = '';

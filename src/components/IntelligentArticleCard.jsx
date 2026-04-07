@@ -71,7 +71,7 @@ export const IntelligentArticleCard = ({
         <div className="card-content">
           <div className="card-meta">
             <span className="article-source">{article.source || 'Feed'}</span>
-            <span className="card-date">{new Date(article.pubDate).toLocaleDateString()}</span>
+            <span className="card-date">{new Date(article.pubDate).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <h2 className="card-title">{article.title}</h2>
           <p className="card-snippet">{article.snippet}</p>

@@ -48,7 +48,7 @@ function parseOPML(text) {
 }
 
 function App() {
-  const [theme, setTheme] = useState('black');
+  const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'system');
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedMode, setFeedMode] = useState('doomscroll');
@@ -126,11 +126,11 @@ function App() {
     return () => clearInterval(scrollIntervalRef.current);
   }, [isAutoScrolling, doomscrollIntervalMs]);
 
-  // Auto-start doomscroll when content is ready
+  // Auto-start doomscroll only if user wants it (persisted)
   useEffect(() => {
     if (feedMode === 'doomscroll' && articles.length > 0) {
-      const t = setTimeout(() => setIsAutoScrolling(true), 300);
-      return () => clearTimeout(t);
+      // We don't auto-force setIsAutoScrolling(true) here anymore, 
+      // instead we rely on the current state which is toggled by the button.
     } else {
       setIsAutoScrolling(false);
       feedContainerRef.current?.scrollTo({ top: 0 });
@@ -152,10 +152,9 @@ function App() {
         setArticles(cached);
         setLoading(false);
       }
-      const lastTheme = localStorage.getItem('yana_theme') || 'black';
-      setTheme(lastTheme);
-      document.documentElement.setAttribute('data-theme', lastTheme);
-
+      
+      // Theme logic handled in a separate useEffect below
+      
       // Load notes
       const storedNotes = await dbBroker.getItem('markdownNotes');
       if (storedNotes?.length) setNotes(storedNotes);
@@ -174,6 +173,27 @@ function App() {
       recognitionRef.current = r;
     }
   }, []);
+
+  // System Adaptive Theme Logic
+  useEffect(() => {
+    const applyTheme = (t) => {
+      let activeTheme = t;
+      if (t === 'system') {
+        activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'black' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', activeTheme);
+    };
+
+    applyTheme(theme);
+    localStorage.setItem('yana_theme', theme);
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = () => applyTheme('system');
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+  }, [theme]);
 
   useEffect(() => {
     const sync = async () => {
@@ -390,10 +410,10 @@ function App() {
         onSearchChange={setSearchQuery}
         onSetFeedMode={setFeedMode}
         onToggleTheme={() => {
-          const nt = theme === 'black' ? 'charcoal' : 'black';
+          const themes = ['system', 'black', 'charcoal', 'light'];
+          const idx = themes.indexOf(theme);
+          const nt = themes[(idx + 1) % themes.length];
           setTheme(nt);
-          document.documentElement.setAttribute('data-theme', nt);
-          localStorage.setItem('yana_theme', nt);
         }}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenNotes={() => setNotesOpen(true)}
@@ -429,6 +449,17 @@ function App() {
           ))
         )}
       </main>
+
+      {isDoomscroll && articles.length > 0 && (
+        <button 
+          className="floating-auto-scroll" 
+          onClick={toggleAutoScroll}
+          title={isAutoScrolling ? "Pause Autoscroll" : "Resume Autoscroll"}
+        >
+          <div className={`scroll-indicator ${isAutoScrolling ? 'active' : ''}`} />
+          <span>{isAutoScrolling ? 'PAUSE' : 'RESUME'}</span>
+        </button>
+      )}
 
       <NotesVault
         isOpen={notesOpen}

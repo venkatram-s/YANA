@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, Search, Moon, Sun, Settings, PenSquare, Lock, Newspaper, Zap, Flame } from 'lucide-react';
+import { BookOpen, Search, Moon, Sun, Settings, PenSquare, Lock, Newspaper, Zap, Flame, Monitor } from 'lucide-react';
 
 export const Header = ({
   theme,
@@ -56,8 +56,8 @@ export const Header = ({
         </button>
       </div>
 
-      <button className="btn-icon" onClick={onToggleTheme} title="Toggle theme">
-        {theme === 'black' ? <Moon size={20} /> : <Sun size={20} />}
+      <button className="btn-icon" onClick={onToggleTheme} title={`Toggle theme (Current: ${theme})`}>
+        {theme === 'system' ? <Monitor size={20} /> : theme === 'black' || theme === 'charcoal' ? <Moon size={20} /> : <Sun size={20} />}
       </button>
       <button className="btn-icon" onClick={onOpenSettings} title="Settings">
         <Settings size={20} />
