@@ -277,11 +277,11 @@ function App() {
 
   const refreshFeeds = async () => {
     if (articles.length === 0) setLoading(true);
-    const agg = [];
-    for (const url of rssFeeds) {
-      const batch = await fetchRssContent(url);
-      agg.push(...batch);
-    }
+    
+    // Optimized: Fetch all feeds in parallel to reduce aggregator churn
+    const batches = await Promise.all(rssFeeds.map(url => fetchRssContent(url)));
+    const agg = batches.flat();
+    
     agg.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
     setArticles(agg);
     dbBroker.setItem('cachedArticles', agg);
