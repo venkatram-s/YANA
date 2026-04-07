@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { Lock, AlertTriangle, X, Download, PenSquare, Plus, Trash, Eye, Edit3 } from 'lucide-react';
+import { Lock, X, Plus, Trash, Eye, Edit3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 export const NotesVault = ({
   isOpen,
   isLocked,
   notes,
-  failedAttempts,
   cryptoPassword,
   onPasswordChange,
   onUnlock,
-  onExport,
   onClose,
   onNotesChange,
 }) => {
@@ -96,7 +94,7 @@ export const NotesVault = ({
               <Trash size={18} color="#ef4444" />
             </button>
             <button className="btn-icon" onClick={onClose}>
-              <X size={20} />
+              <X size(20) />
             </button>
           </div>
         </div>

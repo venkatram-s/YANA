@@ -31,7 +31,7 @@ function validateUrl(urlStr) {
     }
 
     return { valid: true };
-  } catch (e) {
+  } catch {
     return { valid: false, error: 'INVALID_URL_STRUCTURE' };
   }
 }

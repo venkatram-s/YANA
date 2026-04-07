@@ -73,7 +73,6 @@ function App() {
   const [groqKey, setGroqKey] = useState(localStorage.getItem('groq_api_key') || '');
   const [ttsActiveId, setTtsActiveId] = useState(null);
   const [focusedArticleId, setFocusedArticleId] = useState(null);
-  const [isDictating, setIsDictating] = useState(false);
   const [cryptoPassword, setCryptoPassword] = useState('');
   const [vaultLocked, setVaultLocked] = useState(true);
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -97,7 +96,6 @@ function App() {
 
   const scrollIntervalRef = useRef(null);
   const observerRef = useRef(null);
-  const pressTimerRef = useRef(null);
   const recognitionRef = useRef(null);
   const isHoveringRef = useRef(false);
   const feedContainerRef = useRef(null);
@@ -195,9 +193,9 @@ function App() {
       r.continuous = false;
       r.interimResults = false;
       r.lang = 'en-US';
-      r.onresult = (e) => { setNotes(p => [...p, { id: Date.now().toString(), title: 'Voice Transcript', date: new Date().toISOString(), content: e.results[0][0].transcript, sourceUrl: '' }]); setIsDictating(false); };
-      r.onerror = () => setIsDictating(false);
-      r.onend = () => setIsDictating(false);
+      r.onresult = (e) => { setNotes(p => [...p, { id: Date.now().toString(), title: 'Voice Transcript', date: new Date().toISOString(), content: e.results[0][0].transcript, sourceUrl: '' }]); };
+      r.onerror = () => {};
+      r.onend = () => {};
       recognitionRef.current = r;
     }
   }, []);
@@ -219,7 +217,7 @@ function App() {
       refreshFeeds();
     };
     sync();
-  }, [rssFeeds]);
+  }, [rssFeeds, refreshFeeds]);
 
   // Persist notes to IndexedDB
   useEffect(() => {
@@ -266,9 +264,9 @@ function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [settingsOpen, notesOpen, focusedArticleId]);
+  }, [settingsOpen, notesOpen, focusedArticleId, navigateArticle, handleRefineWithAI]);
 
-  const navigateArticle = (dir) => {
+  const navigateArticle = useCallback((dir) => {
     const list = filteredRef.current;
     if (!list.length) return;
     const idx = list.findIndex(a => a.id === focusedArticleId);
@@ -278,32 +276,29 @@ function App() {
     setFocusedArticleId(nextId);
     const el = feedContainerRef.current?.querySelector(`[data-id="${nextId}"]`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  }, [focusedArticleId]);
 
-  const triggerGlitch = () => {
+  const triggerGlitch = useCallback(() => {
     setIsGlitching(true);
     setTimeout(() => setIsGlitching(false), 120);
-  };
+  }, []);
 
-  const refreshFeeds = async () => {
+  const refreshFeeds = useCallback(async () => {
     if (articles.length === 0) setLoading(true);
-    
-    // Optimized: Fetch all feeds in parallel to reduce aggregator churn
     const batches = await Promise.all(rssFeeds.map(url => fetchRssContent(url)));
     const agg = batches.flat();
-    
     agg.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
     setArticles(agg);
     dbBroker.setItem('cachedArticles', agg);
     setLoading(false);
     if (agg.length > 0) triggerGlitch();
-  };
+  }, [articles.length, rssFeeds, triggerGlitch]);
 
-  const handleUnlockVault = async () => {
+  const handleUnlockVault = useCallback(async () => {
     try {
       const enc = await dbBroker.getItem('encryptedNotes');
       if (!enc) { setVaultLocked(false); return; }
-      const plain = await cryptoTool.decryptData(enc, cryptoPassword);
+      await cryptoTool.decryptData(enc, cryptoPassword);
       setVaultLocked(false);
       setFailedAttempts(0);
     } catch {
@@ -318,27 +313,23 @@ function App() {
         alert(`Wrong password. ${3 - f} attempt(s) remaining.`);
       }
     }
-  };
+  }, [cryptoPassword, failedAttempts]);
 
-  const handleRefineWithAI = async (articleId) => {
+  const handleRefineWithAI = useCallback(async (articleId) => {
     if (!groqKey) { alert('Add a Groq API key in Settings first.'); setSettingsOpen(true); return; }
     setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: true } : a));
     try {
       const art = articles.find(a => a.id === articleId);
       const searchQuery = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
       
-      // Fetch live web search results via our serverless proxy
       const searchRes = await fetch(getApiUrl(`/api/web-search?q=${searchQuery}`));
       const searchData = await searchRes.json();
-      
       if (searchData.error) throw new Error(searchData.error);
-      
       const results = searchData.results || [];
       const contextText = results.length > 0 
         ? results.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
         : 'No live search results available. Using training data only.';
       
-      // Synthesize with Groq using real search results
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
@@ -350,15 +341,11 @@ function App() {
           }]
         }),
       });
-      
       const data = await res.json();
       const content = data.choices[0].message.content;
       const [refined, tagStr] = content.split('| Tags: ');
       const newTags = tagStr ? tagStr.split(',').map(t => t.trim()) : [];
-      
       setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, tags: newTags, aiRefined: true, loading: false } : a));
-      
-      // Play success sound
       const audio = new Audio(SUCCESS_SOUND_URL);
       audio.play().catch(() => {});
     } catch (err) {
@@ -366,9 +353,9 @@ function App() {
       setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: false } : a));
       alert('AI request failed. Check console for details.');
     }
-  };
+  }, [aiTone, articles, groqKey]);
 
-  const handleToggleTTS = (article) => {
+  const handleToggleTTS = useCallback((article) => {
     if (!('speechSynthesis' in window)) return;
     if (ttsActiveId === article.id) { window.speechSynthesis.cancel(); setTtsActiveId(null); return; }
     window.speechSynthesis.cancel();
@@ -376,7 +363,7 @@ function App() {
     msg.onend = () => setTtsActiveId(null);
     window.speechSynthesis.speak(msg);
     setTtsActiveId(article.id);
-  };
+  }, [ttsActiveId]);
 
   const handleImportOPML = (file) => {
     const reader = new FileReader();

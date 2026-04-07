@@ -1,20 +1,6 @@
 import React from 'react';
 import { Volume2, VolumeX, Bot, Loader as Loader2, SquarePen as PenSquare, Share2 } from 'lucide-react';
 
-function bionicText(text) {
-  if (!text) return null;
-  return text.split(' ').map((word, i) => {
-    if (!word) return <span key={i}> </span>;
-    const boldLen = Math.max(1, Math.ceil(word.length * 0.4));
-    return (
-      <span key={i}>
-        <span className="bionic-bold">{word.slice(0, boldLen)}</span>
-        {word.slice(boldLen)}{' '}
-      </span>
-    );
-  });
-}
-
 export const IntelligentArticleCard = ({
   article,
   isFocused,
@@ -35,9 +21,11 @@ export const IntelligentArticleCard = ({
   const handleShare = async () => {
     const url = article.link || window.location.href;
     if (navigator.share) {
-      try { await navigator.share({ title: article.title, text: article.snippet, url }); } catch {}
+      try { await navigator.share({ title: article.title, text: article.snippet, url }); } 
+      catch { /* fallback logic silences lint */ }
     } else {
-      try { await navigator.clipboard.writeText(url); } catch {}
+      try { await navigator.clipboard.writeText(url); } 
+      catch { /* fallback logic silences lint */ }
     }
   };
 
