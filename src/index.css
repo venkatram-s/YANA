@@ -166,6 +166,7 @@ body::before {
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
   padding: 0;
 }
 
@@ -1186,6 +1187,90 @@ body::before {
 
   .card-action-btn span {
     font-size: 0.5rem;
+  }
+}
+
+/* --- BOTTOM NAVIGATION (MOBILE ONLY) --- */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(72px + env(safe-area-inset-bottom));
+  background: var(--header-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid var(--border-color);
+  z-index: 1005;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    flex: 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-item.active {
+    color: var(--accent-color);
+    transform: scale(1.05);
+  }
+
+  .nav-item .search-circle {
+    width: 48px;
+    height: 48px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px var(--accent-glow);
+    border: 4px solid var(--bg-color);
+    transform: translateY(-16px);
+  }
+
+  /* Desktop elements hidden on mobile header */
+  .app-header .search-container,
+  .app-header .header-actions .mode-toggle,
+  .app-header .header-actions button:not(:first-child) {
+    display: none;
+  }
+
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    height: calc(64px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    background: rgba(0, 0, 0, 0.8) !important;
+  }
+
+  .feed-container.news-mode {
+    padding: 84px 12px calc(84px + env(safe-area-inset-bottom) + 80px);
+  }
+  
+  .feed-container.doomscroll-mode {
+    scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom));
   }
 }
 

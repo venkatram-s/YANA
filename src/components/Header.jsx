@@ -12,6 +12,7 @@ export const Header = ({
   onToggleTheme,
   onOpenSettings,
   onOpenNotes,
+  searchRef,
 }) => (
   <header className="app-header">
     <div className="logo-container">
@@ -28,6 +29,7 @@ export const Header = ({
     <div className="search-container">
       <Search size={18} color="var(--text-muted)" />
       <input
+        ref={searchRef}
         type="text"
         placeholder="Search..."
         className="search-input"

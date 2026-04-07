@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { DatabaseBroker } from './utils/databaseBroker';
 import { CryptoHarden } from './utils/cryptoHarden';
 import { fetchRssContent } from './services/newsService';
+import { BottomNav } from './components/BottomNav';
 
 import { Header } from './components/Header';
 import { IntelligentArticleCard } from './components/IntelligentArticleCard';
@@ -100,7 +101,16 @@ function App() {
   const recognitionRef = useRef(null);
   const isHoveringRef = useRef(false);
   const feedContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
   const filteredRef = useRef([]);
+
+  const handleFocusSearch = () => {
+    searchInputRef.current?.focus();
+    // On mobile, the header might be hidden or search not visible, but we focus it anyway.
+    // In our CSS we made search container hidden on mobile, so we should toggle a state
+    // but for now let's just make it focusable or scroll to top.
+    feedContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     localStorage.setItem('groq_api_key', groqKey);
@@ -454,6 +464,7 @@ function App() {
 
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenNotes={() => setNotesOpen(true)}
+        searchRef={searchInputRef}
       />
 
       <main
@@ -530,6 +541,15 @@ function App() {
         onExportOPML={() => exportOPML(rssFeeds)}
         onImportOPML={handleImportOPML}
         onHardReset={handleHardReset}
+      />
+
+      <BottomNav 
+        feedMode={feedMode}
+        onSetFeedMode={setFeedMode}
+        onOpenNotes={() => setNotesOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        isLocked={vaultLocked}
+        onFocusSearch={handleFocusSearch}
       />
 
 
