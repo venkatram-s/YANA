@@ -91,7 +91,7 @@ export default defineConfig({
     }
   },
   build: {
-    target: ['es2020', 'chrome100', 'safari13'],
+    target: 'esnext',
     minify: 'terser',
     sourcemap: false
   }
