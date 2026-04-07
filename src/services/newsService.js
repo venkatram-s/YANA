@@ -74,7 +74,13 @@ export const fetchRssContent = async (url) => {
       const getTagValue = (tagName) => node.querySelector(tagName)?.textContent || '';
       
       const title = getTagValue('title');
-      const link = getTagValue('link') || (node.querySelector('link')?.getAttribute('href')) || '';
+      let link = getTagValue('link') || (node.querySelector('link')?.getAttribute('href')) || '';
+      
+      // Sanitize link: strictly allow only http/https to prevent javascript: XSS
+      if (link && !/^https?:\/\//i.test(link)) {
+        link = '#';
+      }
+
       const pubDate = getTagValue('pubDate') || getTagValue('published') || getTagValue('updated') || new Date().toISOString();
       
       let description = getTagValue('description') || getTagValue('summary') || '';

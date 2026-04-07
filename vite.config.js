@@ -56,7 +56,20 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => {
           const urlParam = new URLSearchParams(path.split('?').slice(1).join('?')).get('url');
-          return urlParam;
+          if (!urlParam) return '';
+          
+          try {
+            const url = new URL(urlParam);
+            // Block local/private access during dev
+            const isLocal = /localhost|^127\.|^192\.168\.|^10\./.test(url.hostname);
+            if (isLocal || url.protocol !== 'https:') {
+              console.error('BLOCKED_INSECURE_PROXY_REQUEST:', urlParam);
+              return 'http://127.0.0.1/blocked'; 
+            }
+            return urlParam;
+          } catch (e) {
+            return '';
+          }
         },
         selfHandleResponse: true,
         configure: (proxy, _options) => {
