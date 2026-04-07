@@ -30,11 +30,12 @@ export const SettingsModal = ({
           background: 'var(--surface-color)',
           padding: '30px',
           borderRadius: '16px',
-          width: '520px',
+          width: '560px',
           maxWidth: '96vw',
-          maxHeight: '88vh',
+          maxHeight: '90vh',
           overflowY: 'auto',
           border: '1px solid var(--border-color)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
         }}
         onPointerDown={(e) => e.stopPropagation()}
       >
@@ -45,7 +46,7 @@ export const SettingsModal = ({
         </div>
 
         {/* RSS Feeds */}
-        <section style={{ marginBottom: '28px' }}>
+        <section style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
               RSS Feeds
@@ -116,6 +117,54 @@ export const SettingsModal = ({
           </div>
         </section>
 
+        {/* Custom Theme (Hex Engine) - MOVED TO TOP */}
+        <section style={{ marginBottom: '40px', paddingBottom: '30px', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Custom Hex Themes
+              </h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Paste hex codes to customize YANA instantly.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="btn-primary" 
+                style={{ fontSize: '0.7rem', padding: '8px 12px', height: 'auto', borderRadius: '8px', fontWeight: 800 }}
+                onClick={() => onCustomCssChange(':root {\n  --accent-color: #6366f1;\n  --bg-color: #000000;\n  --surface-color: #0d0d0d;\n  --text-primary: #ffffff;\n  --logo-color: #ffffff;\n}')}
+              >
+                LOAD TEMPLATE
+              </button>
+              <button 
+                className="btn-icon" 
+                style={{ fontSize: '0.7rem', padding: '8px 12px', height: 'auto',  borderRadius: '8px', color: '#ef4444', border: '1px solid #ef4444' }}
+                onClick={() => onCustomCssChange('')}
+              >
+                REVERT
+              </button>
+            </div>
+          </div>
+          <textarea
+            className="search-input"
+            style={{ 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '12px', 
+              padding: '16px', 
+              width: '100%', 
+              height: '180px', 
+              fontFamily: 'monospace', 
+              fontSize: '0.85rem',
+              resize: 'vertical',
+              background: 'rgba(0,0,0,0.2)',
+              color: '#fff',
+              lineHeight: '1.6',
+              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3)'
+            }}
+            placeholder=":root { --accent-color: #ff00ea; }"
+            value={customCss}
+            onChange={(e) => onCustomCssChange(e.target.value)}
+          />
+        </section>
+
         {/* Display Options */}
         <section style={{ marginBottom: '28px' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
@@ -164,55 +213,6 @@ export const SettingsModal = ({
           />
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
             Used for refining articles with research.
-          </p>
-        </section>
-
-        {/* Custom CSS */}
-        <section style={{ marginBottom: '28px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Custom Theme (CSS)
-            </h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className="btn-icon" 
-                style={{ fontSize: '0.7rem', padding: '4px 8px', height: 'auto', width: 'auto', borderRadius: '6px' }}
-                onClick={() => onCustomCssChange(':root {\n  --accent-color: #6366f1;\n  --bg-color: #000000;\n  --surface-color: #0d0d0d;\n  --text-primary: #ffffff;\n}')}
-                title="Load hex template"
-              >
-                Template
-              </button>
-              <button 
-                className="btn-icon" 
-                style={{ fontSize: '0.7rem', padding: '4px 8px', height: 'auto', width: 'auto', borderRadius: '6px', color: '#ef4444' }}
-                onClick={() => onCustomCssChange('')}
-                title="Revert to default"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          <textarea
-            className="search-input"
-            style={{ 
-              border: '1px solid var(--border-color)', 
-              borderRadius: '8px', 
-              padding: '12px', 
-              width: '100%', 
-              height: '120px', 
-              fontFamily: 'monospace', 
-              fontSize: '0.78rem',
-              resize: 'vertical',
-              background: 'transparent',
-              color: 'var(--text-primary)',
-              lineHeight: '1.5'
-            }}
-            placeholder=":root { --accent-color: #ff00ea; }"
-            value={customCss}
-            onChange={(e) => onCustomCssChange(e.target.value)}
-          />
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Override variables to change colors. Buttons and UI elements adapt automatically.
           </p>
         </section>
 

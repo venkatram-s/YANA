@@ -372,13 +372,8 @@ body::before {
   text-shadow: 0 0 20px rgba(var(--text-primary-rgb), 0.1);
 }
 
-.logo-text span {
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: var(--accent-color);
-  vertical-align: super;
-  margin-left: 2px;
-}
+/* Logo branding cleaned */
+
 
 .streak-badge {
   display: flex;
