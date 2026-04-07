@@ -11,20 +11,20 @@ import { SkeletonLoader } from './components/SkeletonLoader';
 import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
 import { getApiUrl } from './utils/config';
+import { parseOPML, generateOPML } from './utils/opmlHelpers';
 
 
 // Safe path for mobile assets
 const SUCCESS_SOUND_URL = './attached_assets/koiroylers-correct-356013.mp3';
 
 function App() {
-  // Move core utilities into useMemo to avoid global initialization TDZ issues
   const dbBroker = useMemo(() => new DatabaseBroker(), []);
   const cryptoTool = useMemo(() => new CryptoHarden(), []);
 
   const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'pitch-black');
   const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('yana_primary_color') || '#60a5fa');
   const [secondaryColor, setSecondaryColor] = useState(() => localStorage.getItem('yana_secondary_color') || '#000000');
-  
+
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedMode, setFeedMode] = useState('doomscroll');
@@ -33,13 +33,13 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiTone, setAiTone] = useState(() => localStorage.getItem('yana_ai_tone') || 'professional');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const [streak] = useState(() => {
     const today = new Date().toDateString();
     const last = localStorage.getItem('yana_last_visit');
     const streakVal = parseInt(localStorage.getItem('yana_streak') || '0', 10);
     if (last === today) return streakVal;
-    
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const next = last === yesterday.toDateString() ? streakVal + 1 : 1;
@@ -63,6 +63,8 @@ function App() {
     const parsed = v ? parseInt(v, 10) : 5000;
     return isNaN(parsed) ? 5000 : parsed;
   });
+
+  const [opmlSyncUrl, setOpmlSyncUrl] = useState(() => localStorage.getItem('yana_opml_sync_url') || '');
 
   const [xrayActiveId, setXrayActiveId] = useState(null);
   const pressTimerRef = useRef(null);
@@ -104,29 +106,49 @@ function App() {
     }
     setLoading(true);
     triggerGlitch();
-    try {
-      const allResolved = await Promise.all(
-        targetFeeds.map(f => fetchRssContent(f.url).catch(() => []))
-      );
-      const combined = allResolved.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-      setArticles(combined);
-      if (combined.length > 0) triggerGlitch();
-    } catch (err) {
-      console.error('YANA REFRESH FAILED:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [triggerGlitch]);
+
+    // Partial Loading for High Perceived Speed
+    let accum = [];
+    const feedCount = targetFeeds.length;
+    let finishedCount = 0;
+
+    targetFeeds.forEach(async (f) => {
+      try {
+        const res = await fetchRssContent(f.url);
+        accum = [...accum, ...res].sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0));
+        setArticles(prev => {
+          const combined = [...prev, ...res].filter((v, i, a) => a.findIndex(t => (t.id === v.id)) === i);
+          return combined.sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0));
+        });
+      } catch (err) {
+        console.error(`Feed ${f.url} failed:`, err);
+      } finally {
+        finishedCount++;
+        if (finishedCount === feedCount) {
+          setLoading(false);
+          dbBroker.setItem('articles_cache', accum);
+        }
+      }
+    });
+
+  }, [dbBroker, triggerGlitch]);
 
   const refreshFeeds = useCallback(() => refreshFeedsInternal(rssFeeds), [rssFeeds, refreshFeedsInternal]);
 
-  // Load Feeds and Settings from DB (One-time only)
+  // Load Initial State from DB
   useEffect(() => {
     if (hasInitializedRef.current) return;
     hasInitializedRef.current = true;
 
     const initDB = async () => {
       try {
+        // Instant Boot from Cache
+        const cachedArticles = await dbBroker.getItem('articles_cache');
+        if (cachedArticles && cachedArticles.length > 0) {
+          setArticles(cachedArticles);
+          setLoading(false);
+        }
+
         const feeds = await dbBroker.getItem('rssFeeds');
         let currentFeeds = feeds;
         if (!feeds || feeds.length === 0) {
@@ -139,8 +161,8 @@ function App() {
           await dbBroker.setItem('rssFeeds', defaults);
         }
         setRssFeeds(currentFeeds);
-        
-        // Initial fetch directly from the DB result
+
+        // Background refresh dispatches
         refreshFeedsInternal(currentFeeds);
 
         const cachedNotes = await dbBroker.getItem('encryptedNotes');
@@ -174,10 +196,10 @@ function App() {
       const searchRes = await fetch(getApiUrl(`/api/web-search?q=${searchQueryParam}`));
       const searchData = await searchRes.json();
       const results = searchData.results || [];
-      const contextText = results.length > 0 
-        ? results.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
+      const contextText = results.length > 0
+        ? results.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
         : 'No live search results available.';
-      
+
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
@@ -194,7 +216,7 @@ function App() {
       const [refined, tagStr] = content.split('| Tags: ');
       const newTags = tagStr ? tagStr.split(',').map(t => t.trim()) : [];
       setArticles(p => p.map(a => a.id === articleId ? { ...a, snippet: refined, tags: newTags, aiRefined: true, loading: false } : a));
-      new Audio(SUCCESS_SOUND_URL).play().catch(() => {});
+      new Audio(SUCCESS_SOUND_URL).play().catch(() => { });
     } catch (err) {
       console.error('AI refinement failed:', err);
       setArticles(p => p.map(a => a.id === articleId ? { ...a, loading: false } : a));
@@ -219,16 +241,12 @@ function App() {
     if (!cryptoPassword) return;
     try {
       const encPackage = await dbBroker.getItem('encryptedNotes');
-      if (!encPackage) { 
-          // If no package exists, we just unlock an empty vault
-          setVaultLocked(false); 
-          return; 
-      }
+      if (!encPackage) { setVaultLocked(false); return; }
       const decrypted = await cryptoTool.decryptData(encPackage, cryptoPassword);
       if (decrypted) {
-          setNotes(JSON.parse(decrypted));
-          setVaultLocked(false);
-          setFailedAttempts(0);
+        setNotes(JSON.parse(decrypted));
+        setVaultLocked(false);
+        setFailedAttempts(0);
       }
     } catch (e) {
       console.error("YANA CRYPTO FAILURE:", e);
@@ -237,7 +255,6 @@ function App() {
       if (f >= 3) {
         await dbBroker.purgeDatabase();
         localStorage.clear();
-        alert("VAULT_WIPED_AFTER_3_FAILURES");
         window.location.reload();
       } else {
         alert(`ACCESS_DENIED: ${3 - f} attempts remaining.`);
@@ -277,14 +294,72 @@ function App() {
     }
   }, [vaultLocked, cryptoPassword, cryptoTool, dbBroker]);
 
+  const handleImportOPML = useCallback(async (file) => {
+    try {
+      const text = await file.text();
+      const importedFeeds = parseOPML(text);
+      if (importedFeeds.length === 0) { alert('No valid feeds found in OPML.'); return; }
+      const updated = [...rssFeeds, ...importedFeeds].filter((v, i, a) => a.findIndex(t => (t.url === v.url)) === i);
+      setRssFeeds(updated);
+      await dbBroker.setItem('rssFeeds', updated);
+      refreshFeedsInternal(updated);
+      triggerGlitch();
+    } catch (err) {
+      console.error('OPML Import Failed:', err);
+      alert('Failed to parse OPML file.');
+    }
+  }, [rssFeeds, dbBroker, refreshFeedsInternal, triggerGlitch]);
+
+  const handleExportOPML = useCallback(() => {
+    const content = generateOPML(rssFeeds);
+    const blob = new Blob([content], { type: 'text/xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `yana_feeds_${new Date().toISOString().slice(0, 10)}.opml`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [rssFeeds]);
+
+  const handleSyncOPML = useCallback(async (targetUrl) => {
+    const urlToUse = targetUrl || opmlSyncUrl;
+    if (!urlToUse) return;
+    setLoading(true);
+    try {
+      const res = await fetch(getApiUrl(`/api/proxy?url=${encodeURIComponent(urlToUse)}`));
+      const text = await res.text();
+      const importedFeeds = parseOPML(text);
+      if (importedFeeds.length > 0) {
+        setRssFeeds(importedFeeds);
+        await dbBroker.setItem('rssFeeds', importedFeeds);
+        refreshFeedsInternal(importedFeeds);
+      }
+    } catch (err) {
+      console.error('OPML Sync Failed:', err);
+      alert('Failed to sync remote OPML.');
+    }
+  }, [opmlSyncUrl, dbBroker, refreshFeedsInternal]);
+
   const filtered = useMemo(() => {
-     const query = searchQuery?.toLowerCase() || '';
-     return articles.filter(a => {
-         const t = a.title?.toLowerCase() || '';
-         const s = a.snippet?.toLowerCase() || '';
-         return t.includes(query) || s.includes(query);
-     });
+    const query = searchQuery?.toLowerCase() || '';
+    return articles.filter(a => {
+      const t = (a.title || '').toLowerCase();
+      const s = (a.snippet || '').toLowerCase();
+      return t.includes(query) || s.includes(query);
+    });
   }, [articles, searchQuery]);
+
+  // Handle Search Input in Header
+  const handleSearchChange = useCallback((val) => {
+    setSearchQuery(val);
+  }, []);
+
+  // Cycle themes in Header
+  const handleToggleTheme = useCallback(() => {
+    if (theme === 'light') setTheme('pitch-black');
+    else if (theme === 'pitch-black') setTheme('custom');
+    else setTheme('light');
+  }, [theme]);
 
   // Update filteredRef for navigation
   useEffect(() => {
@@ -293,56 +368,66 @@ function App() {
 
   return (
     <div className={`yana-container ${isGlitching ? 'glitch-active' : ''}`}>
-      <Header 
-        theme={theme} 
+      <Header
+        theme={theme}
         feedMode={feedMode}
-        onSetTheme={setTheme}
-        onSetFeedMode={setFeedMode}
+        isLocked={vaultLocked}
         searchQuery={searchQuery}
-        onSearch={setSearchQuery}
+        onSearchChange={handleSearchChange}
+        onToggleTheme={handleToggleTheme}
+        onSetFeedMode={setFeedMode}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenNotes={() => setNotesOpen(true)}
         searchRef={searchRef}
         streak={streak}
       />
 
       <main className={`feed-container mode-${feedMode}`} ref={feedContainerRef}>
-        {loading ? (
+        {loading && articles.length === 0 ? (
           <div className="skeleton-grid">{[1, 2, 3, 4, 5, 6].map(i => <SkeletonLoader key={i} />)}</div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-             <h2>Intelligence Stream Empty</h2>
-             <p>Reconnecting to global dispatch nodes...</p>
+            <h2>Intelligence Stream Empty</h2>
+            <p>Reconnecting to global dispatch nodes...</p>
             <button className="btn-primary" onClick={() => refreshFeeds()}>Reconnect Now</button>
+            {opmlSyncUrl && <button className="btn-secondary" onClick={() => handleSyncOPML()} style={{ marginTop: '10px' }}>Sync Remote OPML</button>}
           </div>
         ) : (
-          filtered.map(article => (
-            <IntelligentArticleCard
-              key={article.id}
-              article={article}
-              isFocused={focusedArticleId === article.id}
-              isDoomscroll={feedMode === 'doomscroll'}
-              ttsActiveId={ttsActiveId}
-              xrayActiveId={xrayActiveId}
-              onHover={setFocusedArticleId}
-              onPointerDown={() => { pressTimerRef.current = setTimeout(() => setXrayActiveId(article.id), 800); }}
-              onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
-              onToggleTTS={handleToggleTTS}
-              onRefineWithAI={handleRefineWithAI}
-              onSaveToNotes={() => handleSaveToNotes(article)}
-            />
-          ))
+          <>
+            {loading && <div style={{ position: 'fixed', top: '70px', left: '50%', transform: 'translateX(-50%)', background: 'var(--accent-color)', color: '#000', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 800, zIndex: 1000, boxShadow: '0 4px 10px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="spinner-mini" style={{ width: '12px', height: '12px', border: '2px solid #000', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              FETCHING UPDATES...
+            </div>}
+            {filtered.map(article => (
+              <IntelligentArticleCard
+                key={article.id}
+                article={article}
+                isFocused={focusedArticleId === article.id}
+                isDoomscroll={feedMode === 'doomscroll'}
+                ttsActiveId={ttsActiveId}
+                xrayActiveId={xrayActiveId}
+                onHover={setFocusedArticleId}
+                onPointerDown={() => { pressTimerRef.current = setTimeout(() => setXrayActiveId(article.id), 800); }}
+                onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
+                onToggleTTS={handleToggleTTS}
+                onRefineWithAI={handleRefineWithAI}
+                onSaveToNotes={() => handleSaveToNotes(article)}
+              />
+            ))}
+          </>
         )}
       </main>
 
-      <BottomNav 
-        feedMode={feedMode} 
-        onSetFeedMode={setFeedMode} 
-        onOpenNotes={() => setNotesOpen(true)} 
-        onOpenSettings={() => setSettingsOpen(true)} 
+      <BottomNav
+        feedMode={feedMode}
+        onSetFeedMode={setFeedMode}
+        onOpenNotes={() => setNotesOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
         isLocked={vaultLocked}
         onFocusSearch={() => searchRef.current?.focus()}
       />
 
-      <NotesVault 
+      <NotesVault
         isOpen={notesOpen}
         isLocked={vaultLocked}
         notes={notes}
@@ -353,7 +438,7 @@ function App() {
         onNotesChange={handleUpdateNotes}
       />
 
-      <SettingsModal 
+      <SettingsModal
         isOpen={settingsOpen}
         rssFeeds={rssFeeds}
         newRssUrl={newRssUrl}
@@ -385,9 +470,14 @@ function App() {
         onAiToneChange={setAiTone}
         customCss={customCss}
         onCustomCssChange={setCustomCss}
-        onHardReset={() => { 
-            localStorage.clear(); 
-            dbBroker.purgeDatabase().then(() => window.location.reload());
+        onExportOPML={handleExportOPML}
+        onImportOPML={handleImportOPML}
+        opmlSyncUrl={opmlSyncUrl}
+        onOpmlSyncUrlChange={(u) => { setOpmlSyncUrl(u); localStorage.setItem('yana_opml_sync_url', u); }}
+        onSyncOPML={handleSyncOPML}
+        onHardReset={() => {
+          localStorage.clear();
+          dbBroker.purgeDatabase().then(() => window.location.reload());
         }}
       />
     </div>

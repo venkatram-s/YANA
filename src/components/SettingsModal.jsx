@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Trash, Plus, ShieldAlert, Download, Upload } from 'lucide-react';
+import { X, Trash, Plus, ShieldAlert, Download, Upload, RefreshCw, Link as LinkIcon } from 'lucide-react';
 
 export const SettingsModal = ({
   isOpen,
@@ -23,6 +23,9 @@ export const SettingsModal = ({
   onCustomCssChange,
   onExportOPML,
   onImportOPML,
+  opmlSyncUrl,
+  onOpmlSyncUrlChange,
+  onSyncOPML,
   onHardReset,
 }) => {
   const fileInputRef = useRef(null);
@@ -55,16 +58,16 @@ export const SettingsModal = ({
         <section style={{ marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              RSS Feeds
+              RSS Subscriptions
             </h3>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 className="btn-icon"
-                title="Export as OPML"
+                title="Export OPML"
                 onClick={onExportOPML}
                 style={{ fontSize: '0.75rem', gap: '4px', display: 'flex', alignItems: 'center', color: 'var(--accent-color)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px 10px' }}
               >
-                <Download size={14} /> OPML
+                <Download size={14} /> EXPORT
               </button>
               <button
                 className="btn-icon"
@@ -72,7 +75,7 @@ export const SettingsModal = ({
                 onClick={() => fileInputRef.current?.click()}
                 style={{ fontSize: '0.75rem', gap: '4px', display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '6px 10px' }}
               >
-                <Upload size={14} /> Import
+                <Upload size={14} /> IMPORT
               </button>
               <input
                 ref={fileInputRef}
@@ -88,10 +91,10 @@ export const SettingsModal = ({
             </div>
           </div>
 
-          <ul style={{ listStyle: 'none', padding: 0, marginBottom: '12px' }}>
+          <ul style={{ listStyle: 'none', padding: 0, marginBottom: '16px' }}>
             {rssFeeds.length === 0 && (
               <li style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px', textAlign: 'center' }}>
-                No feeds added yet
+                No active dispatches
               </li>
             )}
             {rssFeeds.map(feed => (
@@ -110,7 +113,7 @@ export const SettingsModal = ({
             ))}
           </ul>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             <input
               type="text"
               className="search-input"
@@ -124,6 +127,33 @@ export const SettingsModal = ({
               <Plus size={16} />
             </button>
           </div>
+
+          {/* Remote Sync Enclave */}
+          <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+            <h4 style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <LinkIcon size={12} /> Remote OPML Sync (Global Subscriptions)
+            </h4>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                className="search-input"
+                style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', flex: 1, fontSize: '0.8rem' }}
+                placeholder="OPML URL (e.g. GitHub Gist)..."
+                value={opmlSyncUrl || ''}
+                onChange={(e) => onOpmlSyncUrlChange(e.target.value)}
+              />
+              <button 
+                className="btn-secondary" 
+                onClick={() => onSyncOPML()}
+                style={{ flexShrink: 0, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}
+              >
+                <RefreshCw size={14} /> SYNC
+              </button>
+            </div>
+            <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+              Pulls subscriptions from a remote file and replaces local list. Ideal for multi-device sync.
+            </p>
+          </div>
         </section>
 
         {/* Custom Hex Themes (Easy Engine) */}
@@ -131,14 +161,13 @@ export const SettingsModal = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
             <h3 style={{ color: 'var(--accent-color)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 900 }}>C</div>
-               Custom Mode (Easy Engine)
+               Terminal Aesthetics
             </h3>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Colors applied directly when mode 'C' is active.</p>
           </div>
           
           <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Primary (Accent)</label>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Accent</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input 
                   type="color" 
@@ -156,7 +185,7 @@ export const SettingsModal = ({
               </div>
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Secondary (BG)</label>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Canvas</label>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input 
                   type="color" 
@@ -192,36 +221,12 @@ export const SettingsModal = ({
               </button>
             ))}
           </div>
-
-          <div style={{ background: 'rgba(0,0,0,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-
-              <h4 style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Advanced CSS (Manual Overlay)</h4>
-              <textarea
-                className="search-input"
-                style={{ 
-                  border: 'none', 
-                  borderRadius: '0', 
-                  padding: '4px', 
-                  width: '100%', 
-                  height: '60px', 
-                  fontFamily: 'monospace', 
-                  fontSize: '0.75rem',
-                  resize: 'vertical',
-                  background: 'transparent',
-                  color: 'var(--text-primary)',
-                  lineHeight: '1.4'
-                }}
-                placeholder=":root { --accent-glow: #ff00ea; }"
-                value={customCss}
-                onChange={(e) => onCustomCssChange(e.target.value)}
-              />
-          </div>
         </section>
 
         {/* AI Synthesis Character */}
         <section style={{ marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-            AI Synthesis Character
+            AI Personality Core
           </h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {['professional', 'sarcastic', 'quippy', 'positive'].map(tone => (
@@ -248,77 +253,19 @@ export const SettingsModal = ({
           </div>
         </section>
 
-        {/* Display Options */}
-
+        {/* AI (Groq) */}
         <section style={{ marginBottom: '28px' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-            Display
-          </h3>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--surface-hover)', borderRadius: '10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div>
-                <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem' }}>Images</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Images are shown with articles when available.</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Doomscroll Interval */}
-        <section style={{ marginBottom: '28px' }}>
-          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-            Doomscroll Interval
-          </h3>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input
-              type="number"
-              min={1}
-              max={600}
-              value={doomscrollIntervalMs ? Math.round(doomscrollIntervalMs/1000) : 5}
-              onChange={(e) => onDoomscrollIntervalChange?.(e.target.valueAsNumber)}
-              style={{ width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', color: 'var(--text-primary)', background: 'transparent' }}
-            />
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>seconds</span>
-          </div>
-        </section>
-
-        {/* Groq AI */}
-        <section style={{ marginBottom: '28px' }}>
-          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-            AI (Groq)
+            AI Cognitive Key (Groq)
           </h3>
           <input
             type="password"
             className="search-input"
             style={{ border: '1px solid var(--border-color)', borderRadius: '8px', padding: '10px', width: '100%' }}
-            placeholder="Groq API Key..."
-            value={groqKey}
+            placeholder="Paste Groq API Key..."
+            value={groqKey || ''}
             onChange={(e) => onGroqKeyChange(e.target.value)}
           />
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Used for refining articles with research.
-          </p>
-        </section>
-
-        {/* Keyboard Shortcuts */}
-        <section style={{ marginBottom: '28px' }}>
-          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-            Keyboard Shortcuts
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {[
-              ['J', 'Next article'],
-              ['K', 'Previous article'],
-              ['R', 'AI Refine focused'],
-              ['S', 'Open notes'],
-            ].map(([key, desc]) => (
-
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
-                <kbd style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '5px', padding: '3px 8px', fontSize: '0.78rem', fontFamily: 'monospace', color: 'var(--accent-color)', fontWeight: 700, flexShrink: 0 }}>{key}</kbd>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>{desc}</span>
-              </div>
-            ))}
-          </div>
         </section>
 
         {/* Danger Zone */}
@@ -328,7 +275,7 @@ export const SettingsModal = ({
             style={{ color: '#ef4444', border: '1px solid #ef4444', width: '100%', borderRadius: '8px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             onClick={onHardReset}
           >
-            <ShieldAlert size={18} /> Reset All Data
+            <ShieldAlert size={18} /> Wipe Local System Cache
           </button>
         </section>
       </div>
