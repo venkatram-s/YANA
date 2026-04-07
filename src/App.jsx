@@ -13,7 +13,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { getApiUrl } from './utils/config';
 
 
-// Safe path for mobile
+// Safe path for mobile assets
 const SUCCESS_SOUND_URL = './attached_assets/koiroylers-correct-356013.mp3';
 
 function App() {
@@ -24,6 +24,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'pitch-black');
   const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('yana_primary_color') || '#60a5fa');
   const [secondaryColor, setSecondaryColor] = useState(() => localStorage.getItem('yana_secondary_color') || '#000000');
+  
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedMode, setFeedMode] = useState('doomscroll');
@@ -32,9 +33,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [aiTone, setAiTone] = useState(() => localStorage.getItem('yana_ai_tone') || 'professional');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAutoScrolling] = useState(false);
-
-  // Initialize streak only once
+  
   const [streak] = useState(() => {
     const today = new Date().toDateString();
     const last = localStorage.getItem('yana_last_visit');
@@ -50,6 +49,7 @@ function App() {
   });
 
   const [rssFeeds, setRssFeeds] = useState([]);
+  const [newRssUrl, setNewRssUrl] = useState('');
   const [groqKey, setGroqKey] = useState(localStorage.getItem('groq_api_key') || '');
   const [ttsActiveId, setTtsActiveId] = useState(null);
   const [focusedArticleId, setFocusedArticleId] = useState(null);
@@ -91,42 +91,22 @@ function App() {
     localStorage.setItem('yana_secondary_color', secondaryColor);
   }, [theme, primaryColor, secondaryColor]);
 
-  // Load Feeds and Settings from DB
-  useEffect(() => {
-    const initDB = async () => {
-      try {
-        const feeds = await dbBroker.getItem('rssFeeds');
-        if (feeds) setRssFeeds(feeds);
-        else {
-          const defaults = [
-            { id: '1', url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge' },
-            { id: '2', url: 'https://news.ycombinator.com/rss', name: 'Hacker News' },
-            { id: '3', url: 'https://techcrunch.com/feed/', name: 'TechCrunch' }
-          ];
-          setRssFeeds(defaults);
-          await dbBroker.setItem('rssFeeds', defaults);
-        }
-        const cachedNotes = await dbBroker.getItem('encryptedNotes');
-        if (cachedNotes) setNotes(cachedNotes);
-      } catch (err) {
-        console.error('YANA DB INIT FAILED:', err);
-      }
-    };
-    initDB();
-  }, [dbBroker]);
-
   const triggerGlitch = useCallback(() => {
     setIsGlitching(true);
     setTimeout(() => setIsGlitching(false), 300);
   }, []);
 
-  const refreshFeeds = useCallback(async () => {
-    if (rssFeeds.length === 0) return;
+  const refreshFeeds = useCallback(async (targetFeeds) => {
+    const feedsToFetch = targetFeeds || rssFeeds;
+    if ((!feedsToFetch || feedsToFetch.length === 0)) {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     triggerGlitch();
     try {
       const all = await Promise.all(
-        rssFeeds.map(f => fetchRssContent(f.url, f.name).catch(() => []))
+        feedsToFetch.map(f => fetchRssContent(f.url, f.name).catch(() => []))
       );
       const agg = all.flat().sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
       setArticles(agg);
@@ -138,13 +118,36 @@ function App() {
     }
   }, [rssFeeds, triggerGlitch]);
 
+  // Load Feeds and Settings from DB
   useEffect(() => {
-    if (rssFeeds.length > 0 && articles.length === 0) {
-      refreshFeeds();
-    }
-  }, [rssFeeds.length, articles.length, refreshFeeds]);
+    const initDB = async () => {
+      try {
+        const feeds = await dbBroker.getItem('rssFeeds');
+        let currentFeeds = feeds;
+        if (!feeds || feeds.length === 0) {
+          const defaults = [
+            { id: '1', url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge' },
+            { id: '2', url: 'https://news.ycombinator.com/rss', name: 'Hacker News' },
+            { id: '3', url: 'https://techcrunch.com/feed/', name: 'TechCrunch' }
+          ];
+          currentFeeds = defaults;
+          await dbBroker.setItem('rssFeeds', defaults);
+        }
+        setRssFeeds(currentFeeds);
+        
+        // Initial fetch after DB is ready
+        refreshFeeds(currentFeeds);
 
-  // Key Bindings
+        const cachedNotes = await dbBroker.getItem('encryptedNotes');
+        if (cachedNotes) setNotes(cachedNotes);
+      } catch (err) {
+        console.error('YANA DB INIT FAILED:', err);
+        setLoading(false);
+      }
+    };
+    initDB();
+  }, [dbBroker, refreshFeeds]);
+
   const navigateArticle = useCallback((dir) => {
     const list = filteredRef.current;
     if (!list.length) return;
@@ -163,14 +166,12 @@ function App() {
     try {
       const art = articles.find(a => a.id === articleId);
       const searchQueryParam = encodeURIComponent(`${art.title} ${art.snippet.substring(0, 100)}`);
-      
       const searchRes = await fetch(getApiUrl(`/api/web-search?q=${searchQueryParam}`));
-      if (!searchRes.ok) throw new Error('Search API inaccessible');
       const searchData = await searchRes.json();
       const results = searchData.results || [];
       const contextText = results.length > 0 
         ? results.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}\nSource: ${r.url}`).join('\n\n')
-        : 'No live search results available. Using training data only.';
+        : 'No live search results available.';
       
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -179,7 +180,7 @@ function App() {
           model: 'llama-3.3-70b-versatile',
           messages: [{
             role: 'user',
-            content: `Article: ${art.title}\nLink: ${art.link}\n\nLive web search results:\n${contextText}\n\nBased on the above, provide a strict 1-sentence summary of the news in the tone "${aiTone}". Following the summary, provide a comma-separated list of 3-5 relevant entities Mentioned (tags). Plain text only. Formatting: [Summary] | Tags: [Tag1, Tag2]`
+            content: `Article: ${art.title}\nContext:\n${contextText}\n\nSummary in tone "${aiTone}". [Summary] | Tags: [Tag1, Tag2]`
           }]
         }),
       });
@@ -199,38 +200,37 @@ function App() {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-      if (e.key === 'Escape') {
-        if (settingsOpen) { setSettingsOpen(false); return; }
-        if (notesOpen) { setNotesOpen(false); return; }
-        return;
-      }
       const k = e.key.toLowerCase();
-      if (k === 'j') { e.preventDefault(); navigateArticle(1); }
-      if (k === 'k') { e.preventDefault(); navigateArticle(-1); }
+      if (k === 'j') navigateArticle(1);
+      if (k === 'k') navigateArticle(-1);
       if (k === 's') setNotesOpen(true);
       if (k === 'r' && focusedArticleId) handleRefineWithAI(focusedArticleId);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [settingsOpen, notesOpen, focusedArticleId, navigateArticle, handleRefineWithAI]);
+  }, [focusedArticleId, navigateArticle, handleRefineWithAI]);
 
   const handleUnlockVault = useCallback(async () => {
+    if (!cryptoPassword) return;
     try {
       const enc = await dbBroker.getItem('encryptedNotes');
       if (!enc) { setVaultLocked(false); return; }
-      await cryptoTool.decryptData(enc, cryptoPassword);
-      setVaultLocked(false);
-      setFailedAttempts(0);
-    } catch {
+      const decrypted = await cryptoTool.decryptData(enc, cryptoPassword);
+      if (decrypted) {
+          setNotes(JSON.parse(decrypted));
+          setVaultLocked(false);
+          setFailedAttempts(0);
+      }
+    } catch (e) {
+      console.error("Vault unlock error:", e);
       const f = failedAttempts + 1;
       setFailedAttempts(f);
       if (f >= 3) {
         await dbBroker.purgeDatabase();
         localStorage.clear();
-        alert('FATAL: Vault wiped after 3 failed attempts.');
         window.location.reload();
       } else {
-        alert(`Wrong password. ${3 - f} attempt(s) remaining.`);
+        alert(`ACCESS_DENIED: Attempt ${f}/3`);
       }
     }
   }, [cryptoPassword, failedAttempts, dbBroker, cryptoTool]);
@@ -257,7 +257,6 @@ function App() {
     setNotes(updated);
     const encrypted = await cryptoTool.encryptData(JSON.stringify(updated), cryptoPassword);
     await dbBroker.setItem('encryptedNotes', encrypted);
-    alert('Note extraction successful.');
   }, [vaultLocked, notes, cryptoPassword, cryptoTool, dbBroker]);
 
   const handleUpdateNotes = useCallback(async (updated) => {
@@ -270,26 +269,10 @@ function App() {
 
   const filtered = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    const result = articles.filter(a => 
-      a.title.toLowerCase().includes(query) || 
-      a.snippet.toLowerCase().includes(query) ||
-      (a.tags && a.tags.some(t => t.toLowerCase().includes(query)))
-    );
+    const result = articles.filter(a => a.title.toLowerCase().includes(query) || a.snippet.toLowerCase().includes(query));
     filteredRef.current = result;
     return result;
   }, [articles, searchQuery]);
-
-  // Doomscroll Auto-refresh
-  useEffect(() => {
-    if (feedMode !== 'doomscroll' || !isAutoScrolling) return;
-    const t = setInterval(() => {
-       const container = feedContainerRef.current;
-       if (container) {
-         container.scrollBy({ top: window.innerHeight * 0.9, behavior: 'smooth' });
-       }
-    }, doomscrollIntervalMs);
-    return () => clearInterval(t);
-  }, [feedMode, isAutoScrolling, doomscrollIntervalMs]);
 
   return (
     <div className={`yana-container ${isGlitching ? 'glitch-active' : ''}`}>
@@ -306,14 +289,10 @@ function App() {
 
       <main className={`feed-container mode-${feedMode}`} ref={feedContainerRef}>
         {loading ? (
-          <div className="skeleton-grid">
-            {[1, 2, 3, 4, 5, 6].map(i => <SkeletonLoader key={i} />)}
-          </div>
+          <div className="skeleton-grid">{[1, 2, 3, 4, 5, 6].map(i => <SkeletonLoader key={i} />)}</div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
-            <h2>No Dispatches Found</h2>
-            <p>Check your subscription feeds or refine your search filters.</p>
-            <button className="btn-primary" onClick={refreshFeeds}>Reconnect Feeds</button>
+            <button className="btn-primary" onClick={() => refreshFeeds()}>Reconnect Feeds</button>
           </div>
         ) : (
           filtered.map(article => (
@@ -325,14 +304,8 @@ function App() {
               ttsActiveId={ttsActiveId}
               xrayActiveId={xrayActiveId}
               onHover={setFocusedArticleId}
-              onLeave={() => {}}
-              onPointerDown={() => {
-                pressTimerRef.current = setTimeout(() => setXrayActiveId(article.id), 800);
-              }}
-              onPointerUp={() => {
-                clearTimeout(pressTimerRef.current);
-                setXrayActiveId(null);
-              }}
+              onPointerDown={() => { pressTimerRef.current = setTimeout(() => setXrayActiveId(article.id), 800); }}
+              onPointerUp={() => { clearTimeout(pressTimerRef.current); setXrayActiveId(null); }}
               onToggleTTS={handleToggleTTS}
               onRefineWithAI={handleRefineWithAI}
               onSaveToNotes={() => handleSaveToNotes(article)}
@@ -341,12 +314,7 @@ function App() {
         )}
       </main>
 
-      <BottomNav 
-        feedMode={feedMode} 
-        onSetFeedMode={setFeedMode} 
-        onOpenVault={() => setNotesOpen(true)}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
+      <BottomNav feedMode={feedMode} onSetFeedMode={setFeedMode} onOpenVault={() => setNotesOpen(true)} onOpenSettings={() => setSettingsOpen(true)} />
 
       <NotesVault 
         isOpen={notesOpen}
@@ -362,23 +330,36 @@ function App() {
       <SettingsModal 
         isOpen={settingsOpen}
         rssFeeds={rssFeeds}
-        onSetRssFeeds={async (newFeeds) => {
-          setRssFeeds(newFeeds);
-          await dbBroker.setItem('rssFeeds', newFeeds);
-        }}
-        primaryColor={primaryColor}
-        onSetPrimaryColor={setPrimaryColor}
-        secondaryColor={secondaryColor}
-        onSetSecondaryColor={setSecondaryColor}
-        aiTone={aiTone}
-        onSetAiTone={setAiTone}
+        newRssUrl={newRssUrl}
         groqKey={groqKey}
-        onSetGroqKey={setGroqKey}
         onClose={() => setSettingsOpen(false)}
-        customCss={customCss}
-        onSetCustomCss={setCustomCss}
         doomscrollIntervalMs={doomscrollIntervalMs}
-        onSetDoomscrollIntervalMs={setDoomscrollIntervalMs}
+        onDoomscrollIntervalChange={setDoomscrollIntervalMs}
+        onAddFeed={async () => {
+          if (!newRssUrl) return;
+          const newFeed = { id: Date.now().toString(), url: newRssUrl, name: 'Personal Feed' };
+          const updated = [...rssFeeds, newFeed];
+          setRssFeeds(updated);
+          setNewRssUrl('');
+          await dbBroker.setItem('rssFeeds', updated);
+          refreshFeeds(updated);
+        }}
+        onRemoveFeed={async (feed) => {
+          const updated = rssFeeds.filter(f => f.id !== feed.id);
+          setRssFeeds(updated);
+          await dbBroker.setItem('rssFeeds', updated);
+        }}
+        onUrlChange={setNewRssUrl}
+        onGroqKeyChange={(key) => { setGroqKey(key); localStorage.setItem('groq_api_key', key); }}
+        primaryColor={primaryColor}
+        onPrimaryColorChange={setPrimaryColor}
+        secondaryColor={secondaryColor}
+        onSecondaryColorChange={setSecondaryColor}
+        aiTone={aiTone}
+        onAiToneChange={setAiTone}
+        customCss={customCss}
+        onCustomCssChange={setCustomCss}
+        onHardReset={() => { localStorage.clear(); dbBroker.purgeDatabase(); window.location.reload(); }}
       />
     </div>
   );

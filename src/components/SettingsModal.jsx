@@ -96,10 +96,13 @@ export const SettingsModal = ({
             )}
             {rssFeeds.map(feed => (
               <li
-                key={feed}
+                key={feed.id || feed.url}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'var(--surface-hover)', borderRadius: '8px', marginBottom: '6px' }}
               >
-                <span style={{ color: 'var(--text-primary)', wordBreak: 'break-all', fontSize: '0.83rem', flex: 1 }}>{feed}</span>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.85rem' }}>{feed.name || 'Personal Feed'}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', wordBreak: 'break-all' }}>{feed.url}</div>
+                </div>
                 <button className="btn-icon" style={{ padding: '0 8px', flexShrink: 0 }} onClick={() => onRemoveFeed(feed)}>
                   <Trash size={15} color="#ef4444" />
                 </button>
