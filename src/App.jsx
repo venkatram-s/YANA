@@ -252,7 +252,7 @@ function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [panicMode, settingsOpen, notesOpen, focusedArticleId]);
+  }, [settingsOpen, notesOpen, focusedArticleId]);
 
   const navigateArticle = (dir) => {
     const list = filteredRef.current;
