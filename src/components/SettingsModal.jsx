@@ -13,6 +13,10 @@ export const SettingsModal = ({
   onRemoveFeed,
   onUrlChange,
   onGroqKeyChange,
+  primaryColor,
+  secondaryColor,
+  onPrimaryColorChange,
+  onSecondaryColorChange,
   customCss,
   onCustomCssChange,
   onExportOPML,
@@ -45,8 +49,8 @@ export const SettingsModal = ({
           <button className="btn-icon" onClick={onClose}><X size={24} /></button>
         </div>
 
-        {/* RSS Feeds */}
-        <section style={{ marginBottom: '32px' }}>
+        {/* RSS Feeds (Restored) */}
+        <section style={{ marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
               RSS Feeds
@@ -117,52 +121,77 @@ export const SettingsModal = ({
           </div>
         </section>
 
-        {/* Custom Theme (Hex Engine) - MOVED TO TOP */}
+        {/* Custom Hex Themes (Easy Engine) */}
         <section style={{ marginBottom: '40px', paddingBottom: '30px', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                Custom Hex Themes
-              </h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Paste hex codes to customize YANA instantly.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <h3 style={{ color: 'var(--accent-color)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+               <div style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid currentColor', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 900 }}>C</div>
+               Custom Mode (Easy Engine)
+            </h3>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Colors applied directly when mode 'C' is active.</p>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Primary (Accent)</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="color" 
+                  value={primaryColor} 
+                  onChange={(e) => onPrimaryColorChange(e.target.value)} 
+                  style={{ width: '40px', height: '40px', border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                />
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  style={{ fontSize: '0.85rem', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', width: '100%' }}
+                  value={primaryColor}
+                  onChange={(e) => onPrimaryColorChange(e.target.value)}
+                />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className="btn-primary" 
-                style={{ fontSize: '0.7rem', padding: '8px 12px', height: 'auto', borderRadius: '8px', fontWeight: 800 }}
-                onClick={() => onCustomCssChange(':root {\n  --accent-color: #6366f1;\n  --bg-color: #000000;\n  --surface-color: #0d0d0d;\n  --text-primary: #ffffff;\n  --logo-color: #ffffff;\n}')}
-              >
-                LOAD TEMPLATE
-              </button>
-              <button 
-                className="btn-icon" 
-                style={{ fontSize: '0.7rem', padding: '8px 12px', height: 'auto',  borderRadius: '8px', color: '#ef4444', border: '1px solid #ef4444' }}
-                onClick={() => onCustomCssChange('')}
-              >
-                REVERT
-              </button>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Secondary (BG)</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input 
+                  type="color" 
+                  value={secondaryColor} 
+                  onChange={(e) => onSecondaryColorChange(e.target.value)} 
+                  style={{ width: '40px', height: '40px', border: 'none', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}
+                />
+                <input 
+                  type="text" 
+                  className="search-input" 
+                  style={{ fontSize: '0.85rem', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px', width: '100%' }}
+                  value={secondaryColor}
+                  onChange={(e) => onSecondaryColorChange(e.target.value)}
+                />
+              </div>
             </div>
           </div>
-          <textarea
-            className="search-input"
-            style={{ 
-              border: '1px solid var(--border-color)', 
-              borderRadius: '12px', 
-              padding: '16px', 
-              width: '100%', 
-              height: '180px', 
-              fontFamily: 'monospace', 
-              fontSize: '0.85rem',
-              resize: 'vertical',
-              background: 'rgba(0,0,0,0.2)',
-              color: '#fff',
-              lineHeight: '1.6',
-              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3)'
-            }}
-            placeholder=":root { --accent-color: #ff00ea; }"
-            value={customCss}
-            onChange={(e) => onCustomCssChange(e.target.value)}
-          />
+
+          <div style={{ background: 'rgba(0,0,0,0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Advanced CSS (Manual Overlay)</h4>
+              <textarea
+                className="search-input"
+                style={{ 
+                  border: 'none', 
+                  borderRadius: '0', 
+                  padding: '4px', 
+                  width: '100%', 
+                  height: '60px', 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.75rem',
+                  resize: 'vertical',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  lineHeight: '1.4'
+                }}
+                placeholder=":root { --accent-glow: #ff00ea; }"
+                value={customCss}
+                onChange={(e) => onCustomCssChange(e.target.value)}
+              />
+          </div>
         </section>
 
         {/* Display Options */}
@@ -227,8 +256,8 @@ export const SettingsModal = ({
               ['K', 'Previous article'],
               ['R', 'AI Refine focused'],
               ['S', 'Open notes'],
-              ['Esc', 'Panic mode'],
             ].map(([key, desc]) => (
+
               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--surface-hover)', borderRadius: '8px' }}>
                 <kbd style={{ background: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '5px', padding: '3px 8px', fontSize: '0.78rem', fontFamily: 'monospace', color: 'var(--accent-color)', fontWeight: 700, flexShrink: 0 }}>{key}</kbd>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>{desc}</span>

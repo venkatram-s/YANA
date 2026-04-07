@@ -9,7 +9,7 @@ import { IntelligentArticleCard } from './components/IntelligentArticleCard';
 import { SkeletonLoader } from './components/SkeletonLoader';
 import { NotesVault } from './components/NotesVault';
 import { SettingsModal } from './components/SettingsModal';
-import { PanicOverlay } from './components/PanicOverlay';
+
 
 // Success sound path
 const SUCCESS_SOUND_URL = '/attached_assets/koiroylers-correct-356013.mp3';
@@ -49,6 +49,9 @@ function parseOPML(text) {
 
 function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'pitch-black');
+  const [primaryColor, setPrimaryColor] = useState(() => localStorage.getItem('yana_primary_color') || '#6366f1');
+  const [secondaryColor, setSecondaryColor] = useState(() => localStorage.getItem('yana_secondary_color') || '#0d0d0d');
+
 
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +59,8 @@ function App() {
   const [isGlitching, setIsGlitching] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [panicMode, setPanicMode] = useState(false);
+
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
   const [streak] = useState(calcStreak);
@@ -101,8 +105,10 @@ function App() {
   }, [groqKey]);
 
   useEffect(() => {
-    localStorage.setItem('yana_custom_css', customCss);
-  }, [customCss]);
+    localStorage.setItem('yana_primary_color', primaryColor);
+    localStorage.setItem('yana_secondary_color', secondaryColor);
+  }, [primaryColor, secondaryColor]);
+
 
 
   // --- AUTO-SCROLL: Smooth interval-based scrolling ---
@@ -231,12 +237,11 @@ function App() {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
       if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
       if (e.key === 'Escape') {
-        if (panicMode) { setPanicMode(false); return; }
         if (settingsOpen) { setSettingsOpen(false); return; }
         if (notesOpen) { setNotesOpen(false); return; }
-        setPanicMode(true);
         return;
       }
+
       const k = e.key.toLowerCase();
       if (k === 'j') { e.preventDefault(); navigateArticle(1); }
       if (k === 'k') { e.preventDefault(); navigateArticle(-1); }
@@ -395,10 +400,29 @@ function App() {
 
   const isDoomscroll = feedMode === 'doomscroll';
 
+  const customStyleBlock = `
+    [data-theme="custom"] {
+      --bg-color: ${secondaryColor};
+      --surface-color: ${secondaryColor === '#000000' ? '#0d0d0d' : secondaryColor};
+      --surface-hover: ${secondaryColor === '#000000' ? '#171717' : secondaryColor};
+      --text-primary: #ffffff;
+      --text-secondary: #a3a3a3;
+      --text-muted: #6b7280;
+      --accent-color: ${primaryColor};
+      --accent-hover: ${primaryColor};
+      --accent-glow: ${primaryColor}44;
+      --logo-color: ${primaryColor};
+      --border-color: rgba(255,255,255,0.1);
+      --header-bg: ${secondaryColor}cc;
+    }
+  `;
+
   return (
     <>
+      <style>{customStyleBlock}</style>
       {customCss && <style>{customCss}</style>}
-      {panicMode && <PanicOverlay onDismiss={() => setPanicMode(false)} />}
+
+
 
 
       <Header
@@ -410,11 +434,12 @@ function App() {
         onSearchChange={setSearchQuery}
         onSetFeedMode={setFeedMode}
         onToggleTheme={() => {
-          const themes = ['light', 'dark', 'pitch-black'];
+          const themes = ['light', 'pitch-black', 'custom'];
           const idx = themes.indexOf(theme);
           const nt = themes[(idx + 1) % themes.length];
           setTheme(nt);
         }}
+
 
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenNotes={() => setNotesOpen(true)}
@@ -488,10 +513,15 @@ function App() {
         onGroqKeyChange={setGroqKey}
         customCss={customCss}
         onCustomCssChange={setCustomCss}
+        primaryColor={primaryColor}
+        secondaryColor={secondaryColor}
+        onPrimaryColorChange={setPrimaryColor}
+        onSecondaryColorChange={setSecondaryColor}
         onExportOPML={() => exportOPML(rssFeeds)}
         onImportOPML={handleImportOPML}
         onHardReset={handleHardReset}
       />
+
     </>
   );
 }

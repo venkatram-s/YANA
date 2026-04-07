@@ -57,7 +57,7 @@ export const Header = ({
       </div>
 
       <button className="btn-icon" onClick={onToggleTheme} title={`Toggle theme (Current: ${theme})`}>
-        {theme === 'light' ? <Sun size={20} /> : theme === 'dark' ? <Moon size={20} /> : <Moon size={20} color="var(--accent-color)" />}
+        {theme === 'light' ? <Sun size={20} /> : theme === 'pitch-black' ? <Moon size={20} /> : <div style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--accent-color)' }}>C</div>}
       </button>
       <button className="btn-icon" onClick={onOpenSettings} title="Settings">
         <Settings size={20} />
