@@ -13,6 +13,8 @@ export const SettingsModal = ({
   onRemoveFeed,
   onUrlChange,
   onGroqKeyChange,
+  customCss,
+  onCustomCssChange,
   onExportOPML,
   onImportOPML,
   onHardReset,
@@ -129,7 +131,7 @@ export const SettingsModal = ({
           </div>
         </section>
 
-        {/* Doomscroll Interval (user-configurable) */}
+        {/* Doomscroll Interval */}
         <section style={{ marginBottom: '28px' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
             Doomscroll Interval
@@ -141,11 +143,12 @@ export const SettingsModal = ({
               max={600}
               value={doomscrollIntervalMs ? Math.round(doomscrollIntervalMs/1000) : 5}
               onChange={(e) => onDoomscrollIntervalChange?.(e.target.valueAsNumber)}
-              style={{ width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+              style={{ width: '90px', padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', color: 'var(--text-primary)', background: 'transparent' }}
             />
             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>seconds</span>
           </div>
         </section>
+
         {/* Groq AI */}
         <section style={{ marginBottom: '28px' }}>
           <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
@@ -160,7 +163,35 @@ export const SettingsModal = ({
             onChange={(e) => onGroqKeyChange(e.target.value)}
           />
           <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-            Used only when you manually click Refine on an article.
+            Used for refining articles with research.
+          </p>
+        </section>
+
+        {/* Custom CSS */}
+        <section style={{ marginBottom: '28px' }}>
+          <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+            Custom Theme (CSS)
+          </h3>
+          <textarea
+            className="search-input"
+            style={{ 
+              border: '1px solid var(--border-color)', 
+              borderRadius: '8px', 
+              padding: '12px', 
+              width: '100%', 
+              height: '100px', 
+              fontFamily: 'monospace', 
+              fontSize: '0.8rem',
+              resize: 'vertical',
+              background: 'transparent',
+              color: 'var(--text-primary)'
+            }}
+            placeholder=":root { --accent-color: #ff00ea; }"
+            value={customCss}
+            onChange={(e) => onCustomCssChange(e.target.value)}
+          />
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+            Inject custom CSS here. Changes apply instantly.
           </p>
         </section>
 

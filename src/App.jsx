@@ -48,7 +48,8 @@ function parseOPML(text) {
 }
 
 function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'system');
+  const [theme, setTheme] = useState(() => localStorage.getItem('yana_theme') || 'pitch-black');
+
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [feedMode, setFeedMode] = useState('doomscroll');
@@ -70,6 +71,8 @@ function App() {
   const [vaultLocked, setVaultLocked] = useState(true);
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [notes, setNotes] = useState([]);
+  const [customCss, setCustomCss] = useState(() => localStorage.getItem('yana_custom_css') || '');
+
 
   const [doomscrollIntervalMs, setDoomscrollIntervalMs] = useState(() => {
     const v = localStorage.getItem('yana_doomscroll_interval_ms');
@@ -96,6 +99,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('groq_api_key', groqKey);
   }, [groqKey]);
+
+  useEffect(() => {
+    localStorage.setItem('yana_custom_css', customCss);
+  }, [customCss]);
+
 
   // --- AUTO-SCROLL: Smooth interval-based scrolling ---
   useEffect(() => {
@@ -174,26 +182,16 @@ function App() {
     }
   }, []);
 
-  // System Adaptive Theme Logic
+  // Adaptive Theme Logic
   useEffect(() => {
     const applyTheme = (t) => {
-      let activeTheme = t;
-      if (t === 'system') {
-        activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'black' : 'light';
-      }
-      document.documentElement.setAttribute('data-theme', activeTheme);
+      document.documentElement.setAttribute('data-theme', t);
     };
 
     applyTheme(theme);
     localStorage.setItem('yana_theme', theme);
-
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const listener = () => applyTheme('system');
-      mediaQuery.addEventListener('change', listener);
-      return () => mediaQuery.removeEventListener('change', listener);
-    }
   }, [theme]);
+
 
   useEffect(() => {
     const sync = async () => {
@@ -399,7 +397,9 @@ function App() {
 
   return (
     <>
+      {customCss && <style>{customCss}</style>}
       {panicMode && <PanicOverlay onDismiss={() => setPanicMode(false)} />}
+
 
       <Header
         theme={theme}
@@ -410,11 +410,12 @@ function App() {
         onSearchChange={setSearchQuery}
         onSetFeedMode={setFeedMode}
         onToggleTheme={() => {
-          const themes = ['system', 'black', 'charcoal', 'light'];
+          const themes = ['light', 'dark', 'pitch-black'];
           const idx = themes.indexOf(theme);
           const nt = themes[(idx + 1) % themes.length];
           setTheme(nt);
         }}
+
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenNotes={() => setNotesOpen(true)}
       />
@@ -485,6 +486,8 @@ function App() {
         onAddFeed={() => { if (newRssUrl && !rssFeeds.includes(newRssUrl)) { setRssFeeds(p => [...p, newRssUrl]); setNewRssUrl(''); } }}
         onRemoveFeed={(u) => setRssFeeds(p => p.filter(f => f !== u))}
         onGroqKeyChange={setGroqKey}
+        customCss={customCss}
+        onCustomCssChange={setCustomCss}
         onExportOPML={() => exportOPML(rssFeeds)}
         onImportOPML={handleImportOPML}
         onHardReset={handleHardReset}

@@ -16,7 +16,7 @@ export const Header = ({
   <header className="app-header">
     <div className="logo-container">
       <BookOpen className="logo-icon" size={28} color="var(--accent-color)" />
-      <h1 className="logo-text">YANA <span>V3</span></h1>
+      <h1 className="logo-text">YANA</h1>
       {streak > 0 && (
         <div className="streak-badge" title={`${streak}-day reading streak`}>
           <Flame size={13} />
@@ -57,7 +57,7 @@ export const Header = ({
       </div>
 
       <button className="btn-icon" onClick={onToggleTheme} title={`Toggle theme (Current: ${theme})`}>
-        {theme === 'system' ? <Monitor size={20} /> : theme === 'black' || theme === 'charcoal' ? <Moon size={20} /> : <Sun size={20} />}
+        {theme === 'light' ? <Sun size={20} /> : theme === 'dark' ? <Moon size={20} /> : <Moon size={20} color="var(--accent-color)" />}
       </button>
       <button className="btn-icon" onClick={onOpenSettings} title="Settings">
         <Settings size={20} />
