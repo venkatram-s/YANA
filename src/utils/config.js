@@ -8,8 +8,10 @@
 
 const PRODUCTION_VERCEL_URL = 'https://yana-neon.vercel.app';
 
-export const BASE_API_URL = PRODUCTION_VERCEL_URL;
+// Detect if we are in a native Capacitor environment
+const isNative = typeof window !== 'undefined' && window.Capacitor?.isNative;
+
+export const BASE_API_URL = isNative ? PRODUCTION_VERCEL_URL : '';
 
 // Utility to prep urls
 export const getApiUrl = (path) => `${BASE_API_URL}${path}`;
-
